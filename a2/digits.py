@@ -55,5 +55,66 @@ def displayNumbers(i):
     # Fine-tune figure; make subplots farther from each other.
     f.subplots_adjust(hspace=0.3)
     
-    plt.show()    
+    plt.show()
+  
+#==================== Part 2 ==============================  
+def calculate_output(X, W, b):
+    output = dot(W.T, X) + b
+    return output 
+
+def softmax(y):
+    '''Return the output of the softmax function for the matrix of output y. y
+    is an NxM matrix where N is the number of outputs for a single case, and M
+    is the number of cases'''
+    return exp(y)/tile(sum(exp(y),0), (len(y),1))
+
+#==================== Part 3 ===============================
+
+def f_p3(x, y, w, b):
+    """
+    Use the sum of the negative log-probabilities of all the training cases 
+    as the cost function.
+    """
+    return -sum(y * log(softmax(calculate_output(x, w, b))))
+
+def df_p3(x, y, w, b):
+    return dot(x, (softmax(calculate_output(x, w, b)) - y).T)
+
+#==================== Part 4 ==============================
+
+def grad_descent(f, df, x, y, init_t, alpha):
+    EPS = 1e-5   #EPS = 10**(-5)
+    prev_t = init_t-10*EPS
+    t = init_t.copy()
+    max_iter = 30000
+    iter  = 0
+    while norm(t - prev_t) >  EPS and iter < max_iter:
+        prev_t = t.copy()
+        t -= alpha*df(x, y, t)
+        if iter % 500 == 0:
+            print "Iter", iter
+            print "x = (%.2f, %.2f, %.2f), f(x) = %.2f" % (t[0], t[1], t[2], f(x, y, t)) 
+            print "Gradient: ", df(x, y, t), "\n"
+        iter += 1
+    return t
+
+def one_hot(dataset, size):
+    """
+    Make x and y for the one-hot encoding.
+    param: size: size get from each separete dataset
+    param: dataset: indicates if using "test" or "train" 
+    """
+    x = np.ones(size)
+    y = np.array([])
+    
+    for i in range(10):
+        data = dataset + str(i)
+        x = np.vstack((x, M[data][:size]))
+        y_i = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        y_i[i] = 1
+        for j in range(size):
+            y = np.vstack((y, y_i))
+    
+    
+    return x, y
     
