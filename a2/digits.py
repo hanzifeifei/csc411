@@ -17,6 +17,8 @@ from scipy.io import loadmat
 #Load the MNIST digit data
 M = loadmat("mnist_all.mat")
 
+
+#==================== Part 1 ==================================
 def part1():
     # M - is a dictionary composed of 10 training set and 10 testing sets
     # each set contains a number from 0 to 9
@@ -38,24 +40,32 @@ def part1():
 def displayNumbers(i):
     
     train = "train" + str(i)
+    random.seed(1)
+    rand = random.random(10) * len(M[train])
+    r = [int(i) for i in rand]
     
     #Display 10 images for each number 
-    f, axarr = plt.subplots(5, 2)
-    axarr[0, 0].imshow(M[train][150].reshape((28,28)), cmap=cm.gray)
-    axarr[0, 1].imshow(M[train][160].reshape((28,28)), cmap=cm.gray)
-    axarr[1, 0].imshow(M[train][170].reshape((28,28)), cmap=cm.gray)
-    axarr[1, 1].imshow(M[train][180].reshape((28,28)), cmap=cm.gray)   
-    axarr[2, 0].imshow(M[train][190].reshape((28,28)), cmap=cm.gray)
-    axarr[3, 0].imshow(M[train][110].reshape((28,28)), cmap=cm.gray)
-    axarr[4, 0].imshow(M[train][120].reshape((28,28)), cmap=cm.gray)
-    axarr[2, 1].imshow(M[train][130].reshape((28,28)), cmap=cm.gray)
-    axarr[3, 1].imshow(M[train][140].reshape((28,28)), cmap=cm.gray)
-    axarr[4, 1].imshow(M[train][100].reshape((28,28)), cmap=cm.gray)
+    f, axarr = plt.subplots(2, 5)
+    axarr[0, 0].imshow(M[train][r[0]].reshape((28,28)), cmap=cm.gray)
+    axarr[0, 1].imshow(M[train][r[1]].reshape((28,28)), cmap=cm.gray)
+    axarr[0, 2].imshow(M[train][r[2]].reshape((28,28)), cmap=cm.gray)
+    axarr[0, 3].imshow(M[train][r[3]].reshape((28,28)), cmap=cm.gray)   
+    axarr[0, 4].imshow(M[train][r[4]].reshape((28,28)), cmap=cm.gray)
+    axarr[1, 0].imshow(M[train][r[5]].reshape((28,28)), cmap=cm.gray)
+    axarr[1, 1].imshow(M[train][r[6]].reshape((28,28)), cmap=cm.gray)
+    axarr[1, 2].imshow(M[train][r[7]].reshape((28,28)), cmap=cm.gray)
+    axarr[1, 3].imshow(M[train][r[8]].reshape((28,28)), cmap=cm.gray)
+    axarr[1, 4].imshow(M[train][r[9]].reshape((28,28)), cmap=cm.gray)
         
     # Fine-tune figure; make subplots farther from each other.
     f.subplots_adjust(hspace=0.3)
     
     plt.show()
+    
+def test_part1():
+    for i in range(10):
+        displayNumbers(i)
+    
   
 #==================== Part 2 ==============================  
 def calculate_output(X, W, b):
@@ -118,3 +128,11 @@ def one_hot(dataset, size):
     
     return x, y
     
+
+
+
+
+#if __name__ == "__main__":
+    
+    #PART1
+    #test_part1()
