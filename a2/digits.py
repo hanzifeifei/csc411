@@ -14,9 +14,12 @@ import cPickle
 import os
 from scipy.io import loadmat
 
+import pickle
+
 #Load the MNIST digit data
 M = loadmat("mnist_all.mat")
 
+snapshot = pickle.load(open("snapshot50.pkl", "rb"), encoding="latin1")
 
 #==================== Part 1 ==================================
 def part1():
@@ -68,8 +71,8 @@ def test_part1():
     
   
 #==================== Part 2 ==============================  
-def calculate_output(X, W, b):
-    output = dot(W.T, X) + b
+def calculate_output(X, W):
+    output = dot(W.T, X)
     return output 
 
 def softmax(y):
@@ -78,17 +81,22 @@ def softmax(y):
     is the number of cases'''
     return exp(y)/tile(sum(exp(y),0), (len(y),1))
 
+def part_2(X, W):
+    y = calculate_output(X, W)
+    result = softmax(y)
+    return result
+
 #==================== Part 3 ===============================
 
-def f_p3(x, y, w, b):
+def f_p3(x, y, w):
     """
     Use the sum of the negative log-probabilities of all the training cases 
     as the cost function.
     """
-    return -sum(y * log(softmax(calculate_output(x, w, b))))
+    return -sum(y * log(softmax(calculate_output(x, w))))
 
-def df_p3(x, y, w, b):
-    return dot(x, (softmax(calculate_output(x, w, b)) - y).T)
+def df_p3(x, y, w):
+    return dot(x, (softmax(calculate_output(x, w)) - y).T)
 
 #==================== Part 4 ==============================
 
@@ -98,15 +106,16 @@ def grad_descent(f, df, x, y, init_t, alpha):
     t = init_t.copy()
     max_iter = 30000
     iter  = 0
+    weights = []
     while norm(t - prev_t) >  EPS and iter < max_iter:
         prev_t = t.copy()
+        weights.append(prev_t)
         t -= alpha*df(x, y, t)
         if iter % 500 == 0:
-            print "Iter", iter
-            print "x = (%.2f, %.2f, %.2f), f(x) = %.2f" % (t[0], t[1], t[2], f(x, y, t)) 
-            print "Gradient: ", df(x, y, t), "\n"
+            print("Iter") + str(iter)
+            print("Gradient: " + df(x, y, t) + "\n")
         iter += 1
-    return t
+    return t, weights
 
 def one_hot(dataset, size):
     """
@@ -114,21 +123,54 @@ def one_hot(dataset, size):
     param: size: size get from each separete dataset
     param: dataset: indicates if using "test" or "train" 
     """
-    x = np.ones(size)
-    y = np.array([])
+    x = np.empty((784, 0))
+    y = np.empty((10, 0))
     
     for i in range(10):
         data = dataset + str(i)
-        x = np.vstack((x, M[data][:size]))
-        y_i = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        x = np.hstack((x, M[data][:size].T))
+        y_i = np.zeros((10,1))
         y_i[i] = 1
         for j in range(size):
-            y = np.vstack((y, y_i))
-    
-    
+            y = np.hstack((y, y_i)) 
+    x = x / 255.0
+    x = np.vstack( (ones((1, x.shape[1])), x))
     return x, y
     
+def part_4_train(alpha):
+    """
+    Train the neural network using gradient descent.
+    """
+    
+    init_weights = zeros((785, 10))
+    random.seed(3)
+    x, y = one_hot("train", 100)
 
+    opt_w, weights = grad_descent(f_p3, df_p3, x, y, init_weights, alpha)
+    return opt_w
+
+def test_part4(dataset, size):
+    '''
+    Tests performance on the training and test sets
+    :param optimized_weights: thetas that will be tested
+    :return: performance values in a tuple
+    '''
+    
+    score = 0
+    theta = part_4_train(0.000001)
+    
+    x_test, y_test = one_hot(dataset, size)
+    y_pred = part_2(x_test, theta)
+    
+    #compare y_pred and y_test
+    for i in range(size*10):
+        
+        if argmax(y_pred.T[i]) == argmax(y_test.T[i]):
+            score += 1
+    
+    return score/float(size*10)
+
+    
 
 
 
