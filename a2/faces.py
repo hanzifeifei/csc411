@@ -84,7 +84,7 @@ def rgb2gray(rgb):
     
     return gray/255.
 
-testfile = urllib.URLopener() 
+testfile = urllib.request.FancyURLopener() 
   
 def get_raw(textfile, gender):  
     data = {}    
@@ -163,28 +163,52 @@ def seperate_dataset(data):
         for element in keys:
             if data[element][0]  == name:
                 splitted_data[j][element] = data[element]
-        
+    gilpin = 0
+    for i in range(len(splitted_data)):
+        if "gilpin" in list(splitted_data[i].keys())[0]:
+            gilpin = i
     
-    for actors_data in splitted_data:
-        i = 0 #to keep track of how many pictures added for each actor
-        keys_a = actors_data.keys()
-        print(keys_a)
-        while i<90 and len(keys_a)>0 :
-            index = random.randint(0, len(keys_a)-1) #add pictures randomly
-            element = keys_a[index]
-            if i < 70:
-                print(element + "------" + str(i))
-                train.update({element:data[element]})
-                i = i + 1
-            elif i < 80:
-                print(element + "------" + str(i))
-                test.update({element:data[element]})
-                i = i + 1
-            elif i < 90:
-                print(element + "------" + str(i))
-                validate.update({element:data[element]})
-                i = i + 1
-            keys_a.remove(element)
+    for j in range(len(splitted_data)):
+        actors_data = splitted_data[j]
+        if j != gilpin:
+            i = 0 #to keep track of how many pictures added for each actor
+            keys_a = list(actors_data.keys())
+            print(keys_a)
+            while i<90 and len(keys_a)>0 :
+                index = random.randint(0, len(keys_a)-1) #add pictures randomly
+                element = keys_a[index]
+                if i < 70:
+                    print(element + "------" + str(i))
+                    train.update({element:data[element]})
+                    i = i + 1
+                elif i < 80:
+                    print(element + "------" + str(i))
+                    test.update({element:data[element]})
+                    i = i + 1
+                elif i < 90:
+                    print(element + "------" + str(i))
+                    validate.update({element:data[element]})
+                    i = i + 1
+                keys_a.remove(element)
+        elif j == gilpin:
+            i = 0 #to keep track of how many pictures added for each actor
+            keys_a = list(actors_data.keys())
+            print(keys_a)
+            while i<55 and len(keys_a)>0 :
+                index = random.randint(0, len(keys_a)-1) #add pictures randomly
+                element = keys_a[index]
+                if i < 39:
+                    print(element + "------" + str(i))
+                    train.update({element:data[element]})
+                    i = i + 1
+                elif i < 47:
+                    print(element + "------" + str(i))
+                    test.update({element:data[element]})
+                    i = i + 1
+                elif i < 55:
+                    print(element + "------" + str(i))
+                    validate.update({element:data[element]})
+                    i = i + 1            
     
     np.save("train.npy", train)
     np.save("validate.npy", validate)
