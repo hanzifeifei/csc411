@@ -10,16 +10,20 @@ from scipy.ndimage import filters
 import urllib
 from numpy import random
 
-import cPickle
+#import cPickle
 import os
 from scipy.io import loadmat
 
-import pickle
+#import pickle
 
 #Load the MNIST digit data
 M = loadmat("mnist_all.mat")
 
-snapshot = pickle.load(open("snapshot50.pkl", "rb"), encoding="latin1")
+#snapshot = pickle.load(open("snapshot50.pkl", "rb"), encoding="latin1")
+#W0 = snapshot["W0"]
+#b0 = snapshot["b0"].reshape((300,1))
+#W1 = snapshot["W1"]
+#b1 = snapshot["b1"].reshape((10,1))
 
 #==================== Part 1 ==================================
 def part1():
@@ -72,6 +76,7 @@ def test_part1():
   
 #==================== Part 2 ==============================  
 def calculate_output(X, W):
+    X = np.vstack( (ones((1, X.shape[1])), X))
     output = dot(W.T, X)
     return output 
 
@@ -93,10 +98,12 @@ def f_p3(x, y, w):
     Use the sum of the negative log-probabilities of all the training cases 
     as the cost function.
     """
-    return -sum(y * log(softmax(calculate_output(x, w))))
+    return -sum(y * log(part_2(x, w)))
 
 def df_p3(x, y, w):
-    return dot(x, (softmax(calculate_output(x, w)) - y).T)
+    p = part_2(x, w)
+    x = np.vstack( (ones((1, x.shape[1])), x))
+    return dot(x, (p - y).T)
 
 #==================== Part 4 ==============================
 
@@ -109,11 +116,12 @@ def grad_descent(f, df, x, y, init_t, alpha):
     weights = []
     while norm(t - prev_t) >  EPS and iter < max_iter:
         prev_t = t.copy()
-        weights.append(prev_t)
         t -= alpha*df(x, y, t)
-        if iter % 500 == 0:
-            print("Iter") + str(iter)
-            print("Gradient: " + df(x, y, t) + "\n")
+        if iter % 100 == 0:
+            cur_t = t.copy()
+            weights.append(cur_t)
+            print("Iter" + str(iter))
+            #print("Gradient: " + str(df(x, y, t)) + "\n")
         iter += 1
     return t, weights
 
@@ -134,7 +142,7 @@ def one_hot(dataset, size):
         for j in range(size):
             y = np.hstack((y, y_i)) 
     x = x / 255.0
-    x = np.vstack( (ones((1, x.shape[1])), x))
+    
     return x, y
     
 def part_4_train(alpha):
@@ -149,6 +157,7 @@ def part_4_train(alpha):
     opt_w, weights = grad_descent(f_p3, df_p3, x, y, init_weights, alpha)
     return opt_w
 
+
 def test_part4(dataset, size):
     '''
     Tests performance on the training and test sets
@@ -162,16 +171,238 @@ def test_part4(dataset, size):
     x_test, y_test = one_hot(dataset, size)
     y_pred = part_2(x_test, theta)
     
-    #compare y_pred and y_test
     for i in range(size*10):
         
         if argmax(y_pred.T[i]) == argmax(y_test.T[i]):
             score += 1
     
-    return score/float(size*10)
+    return (score/float(size*10)) * 100
+
+def part_4_plotlearningcurve(alpha, size):
+    
+    
+    init_weights = zeros((785, 10))
+    random.seed(3)
+    x, y = one_hot("train", 100)
+
+    opt_w, weights = grad_descent(f_p3, df_p3, x, y, init_weights, alpha)
+    performance = []
+    iterations = []
+    x_test, y_test = one_hot("test", size)
+    
+    for i in range(len(weights)):
+        y_pred = part_2(x_test, weights[i])
+        score = 0
+        for j in range(size*10):  
+            if argmax(y_pred.T[j]) == argmax(y_test.T[j]):
+                score += 1        
+        performance.append((score/float(size*10)) * 100)
+        iterations.append(i)
+    
+    plt.plot(iterations, performance, color='green')
+    plt.xlabel('Number of Iterations', fontsize=12)
+    plt.ylabel('Performance(%)', fontsize=12)
+    plt.show()
+
+def part_4_plotweights():
+    weights = np.load("weights.npy")
+    theta = weights[29999]
+    
+    zero = np.reshape(theta.T[0][1:], (28, 28))
+    one = np.reshape(theta.T[1][1:], (28, 28))
+    two = np.reshape(theta.T[2][1:], (28, 28))
+    three = np.reshape(theta.T[3][1:], (28, 28))
+    four = np.reshape(theta.T[4][1:], (28, 28))
+    five = np.reshape(theta.T[5][1:], (28, 28))
+    six = np.reshape(theta.T[6][1:], (28, 28))
+    seven = np.reshape(theta.T[7][1:], (28, 28))
+    eight = np.reshape(theta.T[8][1:], (28, 28))
+    nine = np.reshape(theta.T[9][1:], (28, 28))
+    
+    #Display 10 images for each number 
+    f, axarr = plt.subplots(2, 5)
+    axarr[0, 0].imshow(zero)
+    axarr[0, 1].imshow(one)
+    axarr[0, 2].imshow(two)
+    axarr[0, 3].imshow(three)   
+    axarr[0, 4].imshow(four)
+    axarr[1, 0].imshow(five)
+    axarr[1, 1].imshow(six)
+    axarr[1, 2].imshow(seven)
+    axarr[1, 3].imshow(eight)
+    axarr[1, 4].imshow(nine)    
+    
+    f.subplots_adjust(hspace=0.3)
+    
+    plt.show()    
+    
+#================== Part 5 =============================
+
+def grad_descent_with_momentum(f, df, x, y, init_t, alpha, gamma):
+    EPS = 1e-5   #EPS = 10**(-5)
+    prev_t = init_t-10*EPS
+    t = init_t.copy()
+    max_iter = 30000
+    iter  = 0
+    weights = []
+    v = 0
+    while norm(t - prev_t) >  EPS and iter < max_iter:
+        prev_t = t.copy()
+        v = gamma*v + alpha*df(x, y, t)
+        t -= v
+        if iter % 100 == 0:
+            cur_t = t.copy()
+            weights.append(cur_t)
+            print("Iter" + str(iter))
+            #print("Gradient: " + str(df(x, y, t)) + "\n")
+        iter += 1
+    return t, weights
+
+def part_5_train(alpha, gamma):
+    """
+    Train the neural network using gradient descent.
+    """
+    
+    init_weights = zeros((785, 10))
+    random.seed(3)
+    x, y = one_hot("train", 100)
+
+    opt_w, weights = grad_descent_with_momentum(f_p3, df_p3, x, y, init_weights, alpha, gamma)
+    return opt_w
+
+
+def test_part5(dataset, size):
+    '''
+    Tests performance on the training and test sets
+    :param optimized_weights: thetas that will be tested
+    :return: performance values in a tuple
+    '''
+    
+    score = 0
+    theta = part_5_train(0.000001, 0.99)
+    
+    x_test, y_test = one_hot(dataset, size)
+    y_pred = part_2(x_test, theta)
+    
+    for i in range(size*10):
+        
+        if argmax(y_pred.T[i]) == argmax(y_test.T[i]):
+            score += 1
+    
+    return (score/float(size*10)) * 100
+
+def part_5_plotlearningcurve(alpha, gamma, size):
+    
+    
+    init_weights = zeros((785, 10))
+    random.seed(0)
+    x, y = one_hot("train", 100)
+
+    opt_w, weights = grad_descent_with_momentum(f_p3, df_p3, x, y, init_weights, alpha, gamma)
+    performance = []
+    iterations = []
+    #np.save("weightsMOM.npy", weights)
+    #np.save("opt_w_MOM.npy", opt_w)    
+    x_test, y_test = one_hot("test", size)
+    
+    #for weights generated with momentum
+    for i in range(len(weights)):
+        y_pred = part_2(x_test, weights[i])
+        score = 0
+        for j in range(size*10):  
+            if argmax(y_pred.T[j]) == argmax(y_test.T[j]):
+                score += 1        
+        performance.append((score/float(size*10)) * 100)
+        iterations.append(i)
 
     
+    
+    
+    plt.plot(iterations, performance, color='green')
+    plt.xlabel('Number of Iterations', fontsize=12)
+    plt.ylabel('Performance(%)', fontsize=12)
+    plt.show()
+    
+#=================== Part 6 =========================
+def contour_plot():
+    w1_index = 378
+    w2_index = 322
+    
+    
+    
+    init_weights = zeros((785, 10))
+    random.seed(0)
+    x, y = one_hot("train", 100)    
+    opt_w, weights = grad_descent_with_momentum(f_p3, df_p3, x, y, init_weights, 0.001, 0.9)
+    opt_w1, weights1 = grad_descent(f_p3, df_p3, x, y, init_weights, 0.0001)
+    
 
+    
+    #get all te value of w1 and w2 from weights with momentum
+    w1_mom = []
+    w2_mom = []    
+    for i in range(len(weights)):
+        w1_mom.append(weights[i][w1_index][5])
+        w2_mom.append(weights[i][w2_index][5])
+    
+    theta_mom = weights[-1]
+    X, Y = meshgrid(w1_mom, w2_mom)
+    x, y = one_hot("test", 30)
+    mo_traj = [] #store the tragitory of momentumed weight
+    
+    #for weights generated with momentum
+    Z = np.zeros([len(w1_mom), len(w2_mom)])
+    for i, w_1 in enumerate(w1_mom):
+        for j, w_2 in enumerate(w2_mom):
+            w = theta_mom.copy()
+            w[w1_index][5] = w_1
+            w[w2_index][5] = w_2
+            Z[i,j] = f_p3(x, y, w)
+    
+    #tragectory with momentum
+    w_traj_mom = []
+    iter  = 0
+    while iter < len(weights):
+        if iter % 20 == 0:
+            w_traj_mom.append(weights[iter])
+        iter += 1
+        
+    w1_traj_mom = []
+    w2_traj_mom = []
+    mo_traj = [] #store the trajetory of momentumed weight
+    for i in range(len(w_traj_mom)):
+        w1_traj_mom.append(w_traj_mom[i][w1_index][5])
+        w2_traj_mom.append(w_traj_mom[i][w2_index][5])
+    for i in range(len(w1_traj_mom)):
+        mo_traj.append((w1_traj_mom[i], w2_traj_mom[i]))
+    
+    #tragectory without momentum
+    w_traj = []
+    iter  = 0
+    while iter < len(weights1):
+        if iter % 20 == 0:
+            w_traj.append(weights1[iter])
+        iter += 1
+        
+    w1_traj = []
+    w2_traj = []
+    gd_traj = [] #store the trajetory of momentumed weight
+    for i in range(len(w_traj)):
+        w1_traj.append(w_traj[i][w1_index][5])
+        w2_traj.append(w_traj[i][w2_index][5])
+    for i in range(len(w1_traj)):
+        gd_traj.append((w1_traj[i], w2_traj[i]))    
+
+    #Part6a plot the counter plot with mom, the trajectory with mom and the trajectory wihout mom
+    CS = plt.contour(X, Y, Z)                
+    plt.plot([a for a, b in gd_traj], [b for a,b in gd_traj], 'yo-', label="No Momentum")
+    plt.plot([a for a, b in mo_traj], [b for a,b in mo_traj], 'go-', label="Momentum")
+    plt.legend(loc='top left')
+    plt.title('Contour plot')    
+  
+    show()
+    
+#====================== Part 7 ===============================
 
 
 #if __name__ == "__main__":
