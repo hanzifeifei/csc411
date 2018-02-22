@@ -180,7 +180,6 @@ def test_part4(dataset, size):
 
 def part_4_plotlearningcurve(alpha, size):
     
-    
     init_weights = zeros((785, 10))
     random.seed(3)
     x, y = one_hot("train", 100)
@@ -188,20 +187,38 @@ def part_4_plotlearningcurve(alpha, size):
     opt_w, weights = grad_descent(f_p3, df_p3, x, y, init_weights, alpha)
     performance = []
     iterations = []
+    performance_train = []
     x_test, y_test = one_hot("test", size)
     
     for i in range(len(weights)):
-        y_pred = part_2(x_test, weights[i])
+        
+        #get the performance of the test set
+        print("get the performance of the test set")
+        y_pred = part_2(x_test, weights[i]) 
         score = 0
         for j in range(size*10):  
             if argmax(y_pred.T[j]) == argmax(y_test.T[j]):
                 score += 1        
         performance.append((score/float(size*10)) * 100)
-        iterations.append(i)
+        
+        #get performance of the training set
+        print("get performance of the training set")
+        y_pred_train = part_2(x, weights[i])        
+        score = 0
+        for j in range(100*10):  
+            if argmax(y_pred_train.T[j]) == argmax(y.T[j]):
+                score += 1        
+        performance_train.append((score/float(100*10)) * 100)
+                     
+        #update number of iterations 
+        iterations.append(i)        
     
-    plt.plot(iterations, performance, color='green')
+    plt.plot(iterations, performance_train, color='blue', label="training set")
+    plt.plot(iterations, performance, color='green', label="test set")
     plt.xlabel('Number of Iterations', fontsize=12)
     plt.ylabel('Performance(%)', fontsize=12)
+    plt.legend(loc='top left')
+    plt.title("Learning Curve without Momentum")
     plt.show()
 
 def part_4_plotweights():
@@ -291,8 +308,7 @@ def test_part5(dataset, size):
     
     return (score/float(size*10)) * 100
 
-def part_5_plotlearningcurve(alpha, gamma, size):
-    
+def part_5_plotlearningcurve(alpha, gamma, size):  
     
     init_weights = zeros((785, 10))
     random.seed(0)
@@ -301,26 +317,40 @@ def part_5_plotlearningcurve(alpha, gamma, size):
     opt_w, weights = grad_descent_with_momentum(f_p3, df_p3, x, y, init_weights, alpha, gamma)
     performance = []
     iterations = []
+    performance_train = []
     #np.save("weightsMOM.npy", weights)
     #np.save("opt_w_MOM.npy", opt_w)    
     x_test, y_test = one_hot("test", size)
     
     #for weights generated with momentum
     for i in range(len(weights)):
-        y_pred = part_2(x_test, weights[i])
+        
+        #get the performance of the test set
+        print("get the performance of the test set")
+        y_pred = part_2(x_test, weights[i]) 
         score = 0
         for j in range(size*10):  
             if argmax(y_pred.T[j]) == argmax(y_test.T[j]):
                 score += 1        
         performance.append((score/float(size*10)) * 100)
+        
+        #get performance of the training set
+        print("get performance of the training set")
+        y_pred_train = part_2(x, weights[i])        
+        score = 0
+        for j in range(100*10):  
+            if argmax(y_pred_train.T[j]) == argmax(y.T[j]):
+                score += 1        
+        performance_train.append((score/float(100*10)) * 100)
+                     
+        #update number of iterations 
         iterations.append(i)
-
     
-    
-    
-    plt.plot(iterations, performance, color='green')
+    plt.plot(iterations, performance_train, color='blue', label="training set")
+    plt.plot(iterations, performance, color='green', label="test set")
     plt.xlabel('Number of Iterations', fontsize=12)
     plt.ylabel('Performance(%)', fontsize=12)
+    plt.legend(loc='top left')
     plt.show()
     
 #=================== Part 6 =========================
