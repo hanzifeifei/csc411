@@ -9,7 +9,9 @@ import matplotlib.image as mpimg
 from scipy.ndimage import filters
 import urllib
 from numpy import random
-
+import torch
+from torch.autograd import Variable
+from scipy.io import loadmat
 #import cPickle
 import os
 from scipy.io import loadmat
@@ -433,6 +435,8 @@ def contour_plot():
     show()
     
 #====================== Part 7 ===============================
+
+
 
 
 #if __name__ == "__main__":
