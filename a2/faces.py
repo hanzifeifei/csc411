@@ -163,6 +163,7 @@ def seperate_dataset(data):
         for element in keys:
             if data[element][0]  == name:
                 splitted_data[j][element] = data[element]
+                
     gilpin = 0
     for i in range(len(splitted_data)):
         if "gilpin" in list(splitted_data[i].keys())[0]:
@@ -174,7 +175,7 @@ def seperate_dataset(data):
             i = 0 #to keep track of how many pictures added for each actor
             keys_a = list(actors_data.keys())
             print(keys_a)
-            while i<90 and len(keys_a)>0 :
+            while i<100 and len(keys_a)>0 :
                 index = random.randint(0, len(keys_a)-1) #add pictures randomly
                 element = keys_a[index]
                 if i < 70:
@@ -185,7 +186,7 @@ def seperate_dataset(data):
                     print(element + "------" + str(i))
                     test.update({element:data[element]})
                     i = i + 1
-                elif i < 90:
+                elif i < 100:
                     print(element + "------" + str(i))
                     validate.update({element:data[element]})
                     i = i + 1
@@ -194,18 +195,18 @@ def seperate_dataset(data):
             i = 0 #to keep track of how many pictures added for each actor
             keys_a = list(actors_data.keys())
             print(keys_a)
-            while i<55 and len(keys_a)>0 :
+            while i<86 and len(keys_a)>0 :
                 index = random.randint(0, len(keys_a)-1) #add pictures randomly
                 element = keys_a[index]
-                if i < 39:
+                if i < 56:
                     print(element + "------" + str(i))
                     train.update({element:data[element]})
                     i = i + 1
-                elif i < 47:
+                elif i < 66:
                     print(element + "------" + str(i))
                     test.update({element:data[element]})
                     i = i + 1
-                elif i < 55:
+                elif i < 86:
                     print(element + "------" + str(i))
                     validate.update({element:data[element]})
                     i = i + 1            
