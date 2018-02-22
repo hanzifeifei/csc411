@@ -158,7 +158,7 @@ def part_4_train(alpha):
     return opt_w
 
 
-def test_part4(dataset, size):
+def test_part4(dataset, size, alpha):
     '''
     Tests performance on the training and test sets
     :param optimized_weights: thetas that will be tested
@@ -166,7 +166,7 @@ def test_part4(dataset, size):
     '''
     
     score = 0
-    theta = part_4_train(0.000001)
+    theta = part_4_train(alpha)
     
     x_test, y_test = one_hot(dataset, size)
     y_pred = part_2(x_test, theta)
