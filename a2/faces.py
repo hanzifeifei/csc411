@@ -117,8 +117,8 @@ def get_raw(textfile, gender):
                 x2 = int(dim[2])
                 y2 = int(dim[3])  
                 hashval = line.split()[6]
-                print filename + "----" + hashval
-                print dim
+                print(filename + "----" + hashval)
+                print(dim)
                 #bracco0.jpg----4f9a8a6f1377b03133bc4df0cc240d924e938bc4f163703d4222c796c5d0bd92
                 #['84', '44', '187', '147'] 
                 #bracco1.jpg----963a9b134c26f8aff0714bbe2c11b88f7995fd89a5beb5a88bf21ae46244a850
@@ -130,7 +130,7 @@ def get_raw(textfile, gender):
                     continue #check hash values for invalid faces
                 else:
                     try:
-                        print filename
+                        print(filename)
                         im = imread("uncropped/"+filename)
                         cropp = im[y1:y2, x1:x2]
                          
@@ -142,14 +142,14 @@ def get_raw(textfile, gender):
                             
                         imsave("cropped/"+filename, greyed)
                         if os.path.isfile("cropped/"+filename):
-                            print filename
+                            print(filename)
                             data[filename] = [name, gender]
                     except Exception:
                         print(filename + ":cannot read")
                 i += 1
     return data
                 
-                        
+#seperate datasets into train, test and validate sets                         
 def seperate_dataset(data):
     train = {}
     validate = {}
@@ -240,6 +240,7 @@ def learning_curve():
 #train the algorithm to classify faces
 def train(size, alpha):
     #initiallize weights 
+    
     
     pass
 
