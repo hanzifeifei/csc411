@@ -226,46 +226,57 @@ def get_data(dataset):
     d = dict(dataset.flatten()[0])
     for pic in d.keys():
         if d[pic][0] == 'bracco':
-            a = imread("cropped/"+pic)/255.0
+            a = imread("cropped/"+pic).flatten()/255.0
             x.append(a)
             y.append([1, 0, 0, 0, 0, 0])
         elif d[pic][0] == 'gilpin':
-            a = imread("cropped/"+pic)/255.0
+            a = imread("cropped/"+pic).flatten()/255.0
             x.append(a)
             y.append([0, 1, 0, 0, 0, 0])
         elif d[pic][0] == 'harmon':
-            a = imread("cropped/"+pic)/255.0
+            a = imread("cropped/"+pic).flatten()/255.0
             x.append(a)
             y.append([0, 0, 1, 0, 0, 0])
         elif d[pic][0] == 'baldwin':
-            a = imread("cropped/"+pic)/255.0
+            a = imread("cropped/"+pic).flatten()/255.0
             x.append(a)
             y.append([0, 0, 0, 1, 0, 0])  
         elif d[pic][0] == 'hader':
-            a = imread("cropped/"+pic)/255.0
+            a = imread("cropped/"+pic).flatten()/255.0
             x.append(a)
             y.append([0, 0, 0, 0, 1, 0])  
         elif d[pic][0] == 'carell':
-            a = imread("cropped/"+pic)/255.0
+            a = imread("cropped/"+pic).flatten()/255.0
             x.append(a)
             y.append([0, 0, 0, 0, 0, 1])   
 
-    return np.array(x).T, np.array(y).T
+    return np.array(x), np.array(y)
 
 
+def get_train(dataset):
+    batch_xs = np.zeros((0, 32*32))
+    batch_y_s = np.zeros( (0, 6))
+    
+    train_k =  ["train"+str(i) for i in range(6)]
+    for k in range(6):
+        batch_xs = np.vstack((batch_xs, ((np.array(d[train_k[k]])[:])/255.)  ))
+        one_hot = np.zeros(10)
+        one_hot[k] = 1
+        batch_y_s = np.vstack((batch_y_s,   np.tile(one_hot, (len(M[train_k[k]]), 1))   ))
+    return batch_xs, batch_y_s
 
 
 train_x, train_y = get_data(train)
 test_x, test_y = get_data(test)
 
-dim_x = 32*32
-dim_h = 389
+dim_x = 1024
+dim_h = 20
 dim_out = 6
 
 dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor
 
-x = Variable(torch.from_numpy(train_x), requires_grad=True).type(dtype_float)
+x = Variable(torch.from_numpy(train_x)).type(dtype_float)
 y_classes = Variable(torch.from_numpy(train_y), requires_grad=False).type(dtype_long)
 #Subsample the training set for faster training
 #train_idx = np.random.permutation(range(train_x.shape[0]))[:1000]
