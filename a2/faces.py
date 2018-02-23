@@ -24,10 +24,10 @@ import hashlib
 M = loadmat("mnist_all.mat")
 
 #Load Images from project1
-#test = np.load("test.npy")
-#train = np.load("train.npy")
-#validate = np.load("validate.npy")
-#data = np.load("data.npy")
+test = np.load("test.npy")
+train = np.load("train.npy")
+validate = np.load("validate.npy")
+data = np.load("data.npy")
 
 #====================== Part 8 ===============================
 #download data and remove bad images according to hash
@@ -84,7 +84,7 @@ def rgb2gray(rgb):
     
     return gray/255.
 
-testfile = urllib.request.FancyURLopener() 
+#testfile = urllib.request.FancyURLopener() 
   
 def get_raw(textfile, gender):  
     data = {}    
@@ -219,38 +219,89 @@ def seperate_dataset(data):
 
 
 #get data output to x and y and encode using ONE HOT encoding
-def get_data(dataset, size):
+def get_data(dataset):
     actork =['Bracco', 'Gilpin', 'Harmon', 'Baldwin', 'Hader', 'Carell']
     x = []
     y = []
     d = dict(dataset.flatten()[0])
     for pic in d.keys():
         if d[pic][0] == 'bracco':
-            a = imread("cropped/"+pic).flatten()/255.0
+            a = imread("cropped/"+pic)/255.0
             x.append(a)
             y.append([1, 0, 0, 0, 0, 0])
         elif d[pic][0] == 'gilpin':
-            a = imread("cropped/"+pic).flatten()/255.0
+            a = imread("cropped/"+pic)/255.0
             x.append(a)
             y.append([0, 1, 0, 0, 0, 0])
         elif d[pic][0] == 'harmon':
-            a = imread("cropped/"+pic).flatten()/255.0
+            a = imread("cropped/"+pic)/255.0
             x.append(a)
             y.append([0, 0, 1, 0, 0, 0])
         elif d[pic][0] == 'baldwin':
-            a = imread("cropped/"+pic).flatten()/255.0
+            a = imread("cropped/"+pic)/255.0
             x.append(a)
             y.append([0, 0, 0, 1, 0, 0])  
         elif d[pic][0] == 'hader':
-            a = imread("cropped/"+pic).flatten()/255.0
+            a = imread("cropped/"+pic)/255.0
             x.append(a)
             y.append([0, 0, 0, 0, 1, 0])  
         elif d[pic][0] == 'carell':
-            a = imread("cropped/"+pic).flatten()/255.0
+            a = imread("cropped/"+pic)/255.0
             x.append(a)
             y.append([0, 0, 0, 0, 0, 1])   
 
     return np.array(x).T, np.array(y).T
+
+
+
+
+train_x, train_y = get_data(train)
+test_x, test_y = get_data(test)
+
+dim_x = 32*32
+dim_h = 389
+dim_out = 6
+
+dtype_float = torch.FloatTensor
+dtype_long = torch.LongTensor
+
+x = Variable(torch.from_numpy(train_x), requires_grad=True).type(dtype_float)
+y_classes = Variable(torch.from_numpy(train_y), requires_grad=False).type(dtype_long)
+#Subsample the training set for faster training
+#train_idx = np.random.permutation(range(train_x.shape[0]))[:1000]
+#x = Variable(torch.from_numpy(train_x[train_idx]), requires_grad=False).type(dtype_float)
+#y_classes = Variable(torch.from_numpy(np.argmax(train_y[train_idx], 1)), requires_grad=False).type(dtype_long)
+
+model = torch.nn.Sequential(
+    torch.nn.Linear(dim_x, dim_h),
+    torch.nn.ReLU(),
+    torch.nn.Linear(dim_h, dim_out),
+)
+
+
+loss_fn = torch.nn.CrossEntropyLoss()
+
+
+learning_rate = 1e-2
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+for t in range(10000):
+    y_pred = model(x)
+    loss = loss_fn(y_pred, y_classes)
+    
+    model.zero_grad()  # Zero out the previous gradient computation
+    loss.backward()    # Compute the gradient
+    optimizer.step()   # Use the gradient information to 
+                       # make a step
+    if t%100 == 0:
+        print("iteration" + str(i))
+                       
+x = Variable(torch.from_numpy(test_x), requires_grad=False).type(dtype_float)
+
+
+
+
+
+
 
 
 #split data into mini-bathces using an optimizer of ...my choice
