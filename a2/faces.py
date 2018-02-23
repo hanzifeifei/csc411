@@ -277,7 +277,7 @@ dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor
 
 x = Variable(torch.from_numpy(train_x)).type(dtype_float)
-y_classes = Variable(torch.from_numpy(train_y), requires_grad=False).type(dtype_long)
+y_classes = Variable(torch.from_numpy(np.argmax(train_y,1)), requires_grad=False).type(dtype_long)
 #Subsample the training set for faster training
 #train_idx = np.random.permutation(range(train_x.shape[0]))[:1000]
 #x = Variable(torch.from_numpy(train_x[train_idx]), requires_grad=False).type(dtype_float)
@@ -304,14 +304,11 @@ for t in range(10000):
     optimizer.step()   # Use the gradient information to 
                        # make a step
     if t%100 == 0:
-        print("iteration" + str(i))
+        print("iteration" + str(t))
                        
 x = Variable(torch.from_numpy(test_x), requires_grad=False).type(dtype_float)
-
-
-
-
-
+y_pred = model(x).data.numpy()
+np.mean(np.argmax(y_pred, 1) == np.argmax(test_y, 1))
 
 
 
