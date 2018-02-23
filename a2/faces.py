@@ -135,7 +135,7 @@ def get_raw(textfile, gender):
                         cropp = im[y1:y2, x1:x2]
                          
                         resized = imresize(cropp, (32, 32))                        
-                        if len(im) > 2: #need to convert to grey
+                        if len(im.shape) > 2: #need to convert to grey
                             greyed = rgb2gray(resized)
                         else: #already greyed
                             greyed = resized
@@ -266,34 +266,43 @@ def get_train(dataset):
     return batch_xs, batch_y_s
 
 
-train_x, train_y = get_data(train)
-test_x, test_y = get_data(test)
-
-dim_x = 1024
-dim_h = 20
-dim_out = 6
-
 dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor
 
+#formulate dataset 
+train_x, train_y = get_data(train)
+test_x, test_y = get_data(test)
+validate_x, validate_y = get_data(validate)
+
+#wrap datasets in pytorch variable object 
 x = Variable(torch.from_numpy(train_x)).type(dtype_float)
 y_classes = Variable(torch.from_numpy(np.argmax(train_y,1)), requires_grad=False).type(dtype_long)
-#Subsample the training set for faster training
-#train_idx = np.random.permutation(range(train_x.shape[0]))[:1000]
-#x = Variable(torch.from_numpy(train_x[train_idx]), requires_grad=False).type(dtype_float)
-#y_classes = Variable(torch.from_numpy(np.argmax(train_y[train_idx], 1)), requires_grad=False).type(dtype_long)
+x_test = Variable(torch.from_numpy(test_x), requires_grad=True).type(dtype_float)
+x_validate = Variable(torch.from_numpy(validate_x), requires_grad=True).type(dtype_float)
 
+#dimensions
+dim_x = 1024
+dim_h = 300
+dim_out = 6
+
+
+#Subsample the training set for faster training - MINIBATCH
+train_idx = np.random.permutation(range(train_x.shape[0]))[:100]
+x = Variable(torch.from_numpy(train_x[train_idx]), requires_grad=False).type(dtype_float)
+y_classes = Variable(torch.from_numpy(np.argmax(train_y[train_idx], 1)), requires_grad=False).type(dtype_long)
+ycompare = train_y[train_idx]
+#pytorch nn model 
 model = torch.nn.Sequential(
     torch.nn.Linear(dim_x, dim_h),
     torch.nn.ReLU(),
     torch.nn.Linear(dim_h, dim_out),
 )
 
-
+#initial trial loss function
 loss_fn = torch.nn.CrossEntropyLoss()
 
-
-learning_rate = 1e-2
+#train the algorithm to classify faces
+learning_rate = 1e-4
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 for t in range(10000):
     y_pred = model(x)
@@ -305,30 +314,70 @@ for t in range(10000):
                        # make a step
     if t%100 == 0:
         print("iteration--" + str(t))
-                       
-x = Variable(torch.from_numpy(test_x), requires_grad=False).type(dtype_float)
-y_pred = model(x).data.numpy()
-np.mean(np.argmax(y_pred, 1) == np.argmax(test_y, 1))
 
-
-
-#split data into mini-bathces using an optimizer of ...my choice
-def mini_batch(x, y):
-    return x, y
+#compute test data result                        
+y_pred = model(x_test).data.numpy()
+#get performance 
+print(np.mean(np.argmax(y_pred, 1) == np.argmax(test_y, 1)))
 
 
 #plot learning curves
 def learning_curve():
-    pass
 
-#train the algorithm to classify faces
-def train(size, alpha):
-    #initiallize weights 
+    #store lrarining rate 
+    iterations = []
+    test_performance = []
+    train_performance = []
+    validate_performance = []
+    
+    model = torch.nn.Sequential(
+        torch.nn.Linear(dim_x, dim_h),
+        torch.nn.ReLU(),
+        torch.nn.Linear(dim_h, dim_out),
+    )
+    
+    learning_rate = 1e-2
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)    
+    
+    for t in range(10000):
+        y_pred = model(x)
+        loss = loss_fn(y_pred, y_classes)
+        
+        model.zero_grad()  # Zero out the previous gradient computation
+        loss.backward()    # Compute the gradient
+        optimizer.step()   # Use the gradient information to 
+                           # make a step
+        if t%100 == 0:
+            print("iteration--" + str(t))
+            
+        #store iteration in list
+        iterations.append(t)
+            
+        #compute train result and performance store in list 
+        y_train = model(x).data.numpy()
+        accuracyTrain = np.mean(np.argmax(y_train, 1) == np.argmax(ycompare, 1)) * 100
+        train_performance.append(accuracyTrain)
+    
+        #compute test dataset and performance store in list                      
+        y_test = model(x_test).data.numpy()
+        accuracyTest = np.mean(np.argmax(y_test, 1) == np.argmax(test_y, 1)) * 100
+        test_performance.append(accuracyTest)
+        
+        #compute validate dataset and performance store in list                      
+        y_validate = model(x_validate).data.numpy()
+        accuracyValidate = np.mean(np.argmax(y_validate, 1) == np.argmax(validate_y, 1))*100
+        validate_performance.append(accuracyValidate)     
+        
+    #plot the learning curve 
+    plt.plot(iterations, train_performance, color='blue', label="training set")
+    plt.plot(iterations, test_performance, color='green', label="test set")
+    plt.plot(iterations, validate_performance, color='red', label="validation set")
+    plt.xlabel('Number of Iterations', fontsize=12)
+    plt.ylabel('Performance(%)', fontsize=12)
+    plt.legend(loc='top left')
+    plt.show()
     
     
-    pass
+    
 
-#test the performance of the training algorithm 
-def test(theta):
-    size = 20
-    pass
+
