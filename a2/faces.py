@@ -182,7 +182,7 @@ def seperate_dataset(data):
                     print(element + "------" + str(i))
                     train.update({element:data[element]})
                     i = i + 1
-                elif i < 80:
+                elif i < 90:
                     print(element + "------" + str(i))
                     test.update({element:data[element]})
                     i = i + 1
@@ -202,7 +202,7 @@ def seperate_dataset(data):
                     print(element + "------" + str(i))
                     train.update({element:data[element]})
                     i = i + 1
-                elif i < 66:
+                elif i < 76:
                     print(element + "------" + str(i))
                     test.update({element:data[element]})
                     i = i + 1
@@ -304,7 +304,7 @@ for t in range(10000):
     optimizer.step()   # Use the gradient information to 
                        # make a step
     if t%100 == 0:
-        print("iteration" + str(t))
+        print("iteration--" + str(t))
                        
 x = Variable(torch.from_numpy(test_x), requires_grad=False).type(dtype_float)
 y_pred = model(x).data.numpy()
