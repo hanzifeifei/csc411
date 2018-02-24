@@ -374,6 +374,7 @@ def part_5_plotlearningcurve(alpha, gamma, size):
 def contour_plot():
     w1_index = 378
     w2_index = 322
+    index = 1
     
     init_weights = zeros((785, 10))
     random.seed(0)
@@ -385,8 +386,8 @@ def contour_plot():
     w1_mom = []
     w2_mom = []    
     for i in range(len(weights)):
-        w1_mom.append(weights[i][w1_index][1])
-        w2_mom.append(weights[i][w2_index][1])
+        w1_mom.append(weights[i][w1_index][index])
+        w2_mom.append(weights[i][w2_index][index])
     
     theta_mom = weights[-1]
     X, Y = meshgrid(w1_mom, w2_mom)
@@ -397,8 +398,8 @@ def contour_plot():
     for i, w_1 in enumerate(w1_mom):
         for j, w_2 in enumerate(w2_mom):
             w = theta_mom.copy()
-            w[w1_index][1] = w_1
-            w[w2_index][1] = w_2
+            w[w1_index][index] = w_1
+            w[w2_index][index] = w_2
             Z[i,j] = f_p3(x, y, w)
     
     #tragectory with momentum
@@ -413,8 +414,8 @@ def contour_plot():
     w2_traj_mom = []
     mo_traj = [] #store the trajetory of momentumed weight
     for i in range(len(w_traj_mom)):
-        w1_traj_mom.append(w_traj_mom[i][w1_index][1])
-        w2_traj_mom.append(w_traj_mom[i][w2_index][1])
+        w1_traj_mom.append(w_traj_mom[i][w1_index][index])
+        w2_traj_mom.append(w_traj_mom[i][w2_index][index])
     for i in range(len(w1_traj_mom)):
         mo_traj.append((w1_traj_mom[i], w2_traj_mom[i]))
     
@@ -430,8 +431,8 @@ def contour_plot():
     w2_traj = []
     gd_traj = [] #store the trajetory of momentumed weight
     for i in range(len(w_traj)):
-        w1_traj.append(w_traj[i][w1_index][1])
-        w2_traj.append(w_traj[i][w2_index][1])
+        w1_traj.append(w_traj[i][w1_index][index])
+        w2_traj.append(w_traj[i][w2_index][index])
     for i in range(len(w1_traj)):
         gd_traj.append((w1_traj[i], w2_traj[i]))    
 
