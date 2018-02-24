@@ -107,6 +107,21 @@ def df_p3(x, y, w):
     x = np.vstack( (ones((1, x.shape[1])), x))
     return dot(x, (p - y).T)
 
+def part3():
+    random.seed(0)
+    x = reshape(random.rand(784 * 20), (784, 20))
+    y = zeros((10, 20))
+    y[0, :] = 1
+    w = reshape(random.rand(785 * 10), (785, 10))
+    
+    h = zeros((785, 10))
+    h[0, 0] = 1e-5
+    
+    print("Gradient Function value at position (0, 0)=======")
+    print(str(df_p3(x, y, w)[0][0]))
+    print("Finite Difference at position (0, 0) =======")
+    print(str(((f_p3(x, y, w+h) - f_p3(x, y, w))/(h))[0][0]))
+    
 #==================== Part 4 ==============================
 
 def grad_descent(f, df, x, y, init_t, alpha):

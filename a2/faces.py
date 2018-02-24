@@ -30,8 +30,8 @@ validate = np.load("validate.npy")
 data = np.load("data.npy")
 
 #====================== Part 8 ===============================
-#download data and remove bad images according to hash
 
+#download data and remove bad images according to hash
 def download_images():
 
     raw_male = "facescrub_actors_male.txt"
@@ -253,18 +253,6 @@ def get_data(dataset):
     return np.array(x), np.array(y)
 
 
-def get_train(dataset):
-    batch_xs = np.zeros((0, 32*32))
-    batch_y_s = np.zeros( (0, 6))
-    
-    train_k =  ["train"+str(i) for i in range(6)]
-    for k in range(6):
-        batch_xs = np.vstack((batch_xs, ((np.array(d[train_k[k]])[:])/255.)  ))
-        one_hot = np.zeros(10)
-        one_hot[k] = 1
-        batch_y_s = np.vstack((batch_y_s,   np.tile(one_hot, (len(M[train_k[k]]), 1))   ))
-    return batch_xs, batch_y_s
-
 
 dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor
@@ -280,17 +268,17 @@ y_classes = Variable(torch.from_numpy(np.argmax(train_y,1)), requires_grad=False
 x_test = Variable(torch.from_numpy(test_x), requires_grad=True).type(dtype_float)
 x_validate = Variable(torch.from_numpy(validate_x), requires_grad=True).type(dtype_float)
 
+#Subsample the training set for faster training - MINIBATCH
+train_idx = np.random.permutation(range(train_x.shape[0]))[:300]
+x = Variable(torch.from_numpy(train_x[train_idx]), requires_grad=False).type(dtype_float)
+y_classes = Variable(torch.from_numpy(np.argmax(train_y[train_idx], 1)), requires_grad=False).type(dtype_long)
+ycompare = train_y[train_idx]
+
 #dimensions
 dim_x = 1024
 dim_h = 300
 dim_out = 6
 
-
-#Subsample the training set for faster training - MINIBATCH
-train_idx = np.random.permutation(range(train_x.shape[0]))[:100]
-x = Variable(torch.from_numpy(train_x[train_idx]), requires_grad=False).type(dtype_float)
-y_classes = Variable(torch.from_numpy(np.argmax(train_y[train_idx], 1)), requires_grad=False).type(dtype_long)
-ycompare = train_y[train_idx]
 #pytorch nn model 
 model = torch.nn.Sequential(
     torch.nn.Linear(dim_x, dim_h),
@@ -302,7 +290,7 @@ model = torch.nn.Sequential(
 loss_fn = torch.nn.CrossEntropyLoss()
 
 #train the algorithm to classify faces
-learning_rate = 1e-4
+learning_rate = 1e-2
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 for t in range(10000):
     y_pred = model(x)
@@ -381,3 +369,47 @@ def learning_curve():
     
 
 
+#===================Part 9=======================================
+def draw_weights():
+    y_pred = model(x_test).data.numpy()
+    y_index = np.argmax(y_pred, 1)
+    
+    #select the index that predict actor1-gliphin and actor0-bracco
+    #subset the x that predicted actor1 and actor0
+    x1_index = []
+    x0_index = []
+    for i in range(len(y_index)):
+        print(i)
+        if y_index[i] == 1:
+            x1_index.append(i)
+        elif y_index[i] == 0:
+            x0_index.append(i)
+    
+    x1 = x_test[x1_index]
+    x0 = x_test[x0_index]
+    
+    #find the hidden layer using forward propagation
+    h1 = dot(model[0].weight.data.numpy(), x1.data.numpy().T)
+    h0 = dot(model[0].weight.data.numpy(), x0.data.numpy().T)
+    
+    #find the index larges value of the hidden layers
+    argmax(h1.T[0])
+    argmax(h1.T[1])
+    argmax(h1.T[2])
+    argmax(h1.T[3])
+    argmax(h1.T[4])
+    #We can see that for actor1 all of the max hidden layer value is at index 152 so 
+    plt.imshow(model[0].weight.data.numpy()[152, :].reshape((32, 32)), cmap=plt.cm.coolwarm)
+    show()
+    
+    argmax(h0.T[0])
+    argmax(h0.T[1])
+    argmax(h0.T[2])
+    argmax(h0.T[3])
+    argmax(h0.T[4])
+    #We can see that for actor5 all of the max hidden layer value is at index 10 so 
+    plt.imshow(model[0].weight.data.numpy()[10, :].reshape((32, 32)), cmap=plt.cm.coolwarm)
+    show()    
+    
+    
+    
