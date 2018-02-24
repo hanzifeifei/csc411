@@ -34,6 +34,7 @@ data = np.load("data10.npy")
 
 #====================== Part 10 ===============================
 
+#=============== functions to get data ======================
 def download_images():
 
     raw_male = "facescrub_actors_male.txt"
@@ -210,6 +211,25 @@ def seperate_dataset(data):
                     i = i + 1            
     return [train, validate, test]
 
+#======================= get data ===========================
+#read and save images
+data10 = download_images()
+sep_d = seperate_dataset(data10)
+np.save("data10.npy", data10)
+np.save("train10.npy", sep_d[0])
+np.save("validate10.npy", sep_d[1])
+np.save("test10.npy", sep_d[2])
+
+
+#====================== AlexNet and tests on performance ===============
+
+#Load images
+test = np.load("test10.npy")
+train = np.load("train10.npy")
+validate = np.load("validate10.npy")
+data = np.load("data10.npy")
+
+
 
 #Class AlexNet
 class MyAlexNet(nn.Module):
@@ -315,12 +335,16 @@ def get_data(dataset):
 
     return np.array(x), np.array(y)
 
-#AlexNet
+
+
+#=================== get the activations and test data=======================
+
 dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor
-ANmodel = MyAlexNet()
+
 
 def getActivations(dataset):
+    ANmodel = MyAlexNet()
     dataset_x, dataset_y = get_data(dataset)
     
     x = Variable(torch.from_numpy(dataset_x)).type(dtype_float)
@@ -330,8 +354,6 @@ def getActivations(dataset):
     return activations, dataset_y
 
 
-
-#test on performance
 activations, train_y = getActivations(train)
 activ_train = activations.data.numpy()
 save("activ_train.npy", activ_train)
@@ -339,10 +361,24 @@ activ_tr = np.load("activ_train.npy")
 x = Variable(torch.from_numpy(activ_tr)).type(dtype_float)
 y_classes = Variable(torch.from_numpy(np.argmax(train_y,1)), requires_grad=False).type(dtype_long)
 
+iterations = []
+test_performance = []
+train_performance = []
+validate_performance = []
+
+train_x, train_y_iter = getActivations(train)
+validation_x, validation_y = getActivations(validate)
+test_x, test_y = getActivations(test)
+
+
+
+#=================== run the model and test on performance =======================
 
 dim_activations = 256 * 6 * 6
-dim_h = 20
+dim_h = 30
 dim_out = 6
+
+
 
 model = torch.nn.Sequential(
     torch.nn.Linear(dim_activations, dim_h),
@@ -364,30 +400,38 @@ for t in range(10000):
                        # make a step
     if t%100 == 0:
         print("iteration" + str(t))
-                       
-y_pred = model(x).data.numpy()
-print("performace on training set")
-p_train = np.mean(np.argmax(y_pred, 1) == np.argmax(train_y, 1))
-print(p_train)
-
-validation_x, validation_y = getActivations(validate)
-y_pred = model(validation_x).data.numpy()
-print("performace on validation set")
-p_validation = np.mean(np.argmax(y_pred, 1) == np.argmax(validation_y, 1))
-print(p_validation)
-
-test_x, test_y = getActivations(test)
-y_pred = model(test_x).data.numpy()
-print("performace on test set")
-p_test = np.mean(np.argmax(y_pred, 1) == np.argmax(test_y, 1))
-print(p_test)
-
-
-#if __name__ == "__main__":
-    #data10 = download_images()
-    #sep_d = seperate_dataset(data10)
-    #np.save("data10.npy", data10)
-    #np.save("train10.npy", sep_d[0])
-    #np.save("validate10.npy", sep_d[1])
-    #np.save("test10.npy", sep_d[2])
+        
+    #store iteration in list
+    iterations.append(t)
     
+    #compute train result and performance store in list
+    y_pred1 = model(train_x).data.numpy()
+    p_train = np.mean(np.argmax(y_pred1, 1) == np.argmax(train_y_iter, 1)) * 100   
+    train_performance.append(p_train)
+    
+    #compute validate dataset and performance store in list
+    y_pred2 = model(validation_x).data.numpy()
+    p_validation = np.mean(np.argmax(y_pred2, 1) == np.argmax(validation_y, 1)) * 100
+    validate_performance.append(p_validation)      
+
+    #compute test dataset and performance store in list 
+    y_pred3 = model(test_x).data.numpy()
+    p_test = np.mean(np.argmax(y_pred3, 1) == np.argmax(test_y, 1)) * 100
+    test_performance.append(p_test)
+   
+
+#plot the learning curve 
+plt.plot(iterations, train_performance, color='blue', label="training set")
+plt.plot(iterations, test_performance, color='green', label="test set")
+plt.plot(iterations, validate_performance, color='red', label="validation set")
+plt.xlabel('Number of Iterations', fontsize=12)
+plt.ylabel('Performance(%)', fontsize=12)
+plt.legend(loc='top left')
+plt.show()
+
+#print the performance on different sets
+print("The performance of the training set is " + str(p_train) + "%")
+print("The performance of the validation set is " + str(p_validation) + "%")
+print("The performance of the test set is " + str(p_test) + "%")
+
+
