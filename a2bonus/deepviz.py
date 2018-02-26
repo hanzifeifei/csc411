@@ -227,15 +227,16 @@ class MyAlexNet(nn.Module):
     def load_weights(self):
         an_builtin = torchvision.models.alexnet(pretrained=True)
         
+        #weights indexed by layer
         features_weight_i = [0, 3, 6, 8, 10]
         for i in features_weight_i:
             self.features[i].weight = an_builtin.features[i].weight
             self.features[i].bias = an_builtin.features[i].bias
             
-        #classifier_weight_i = [1, 4, 6]
-        #for i in classifier_weight_i:
-            #self.classifier[i].weight = an_builtin.classifier[i].weight
-            #self.classifier[i].bias = an_builtin.classifier[i].bias
+        classifier_weight_i = [1, 4, 6]
+        for i in classifier_weight_i:
+            self.classifier[i].weight = an_builtin.classifier[i].weight
+            self.classifier[i].bias = an_builtin.classifier[i].bias
 
     def __init__(self, num_classes=1000):
         super(MyAlexNet, self).__init__()
@@ -333,7 +334,29 @@ def get_data(dataset):
 dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor
 
+model = nn.Sequential(nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2))
 
+
+
+im = imread("cropped10/"+ "bracco2.jpg")[:,:,:3]
+im = im - np.mean(im.flatten())
+im = im/np.max(np.abs(im.flatten()))
+im = np.rollaxis(im, -1).astype(np.float32) 
+
+#weightsed model
+ANmodel = MyAlexNet()
+
+#built-in no weights model
+#ANmodel = models.AlexNet()
+
+x = Variable(torch.from_numpy(im).unsqueeze_(0)).type(dtype_float)
+activations = ANmodel.forward(x)
+weights = ANmodel.features[0].weight
+
+#step1: draw weights
+
+#describe what happened each layer (there's kinds two layers) 
+'''
 def getActivations(dataset):
     ANmodel = MyAlexNet()
     dataset_x, dataset_y = get_data(dataset)
@@ -358,7 +381,7 @@ y_classes = Variable(torch.from_numpy(np.argmax(train_y,1)), requires_grad=False
 train_x, train_y_iter = getActivations(train)
 validation_x, validation_y = getActivations(validate)
 test_x, test_y = getActivations(test)
-
+'''
 
 
 #=================== run the model and test on performance =======================
