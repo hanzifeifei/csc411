@@ -270,7 +270,7 @@ class MyAlexNet(nn.Module):
     def forward(self, x):
         x = self.features(x)
         x = x.view(x.size(0), 256 * 6 * 6)
-        #x = self.classifier(x)
+        x = self.classifier(x)
         return x
 
 
@@ -328,6 +328,10 @@ def get_data(dataset):
     return np.array(x), np.array(y)
 
 
+def resize_img(image):
+    resized = imresize(image, (227, 227)) 
+    return resized
+
 
 #=================== get the activations and test data=======================
 
@@ -338,25 +342,34 @@ model = nn.Sequential(nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2))
 
 
 
-im = imread("cropped10/"+ "bracco2.jpg")[:,:,:3]
+#im = imread("cropped10/"+ "bracco2.jpg")[:,:,:3]
+im = imread("face2.jpeg")
+im = resize_img(im)[:,:,:3]
 im = im - np.mean(im.flatten())
 im = im/np.max(np.abs(im.flatten()))
-im = np.rollaxis(im, -1).astype(np.float32) 
+im = np.rollaxis(im, -1).astype(np.float32)
+im_v = Variable(torch.from_numpy(im).unsqueeze_(0), requires_grad=False)
 
 #weightsed model
 ANmodel = MyAlexNet()
 
+weights = ANmodel.forward(im_v)
+w = weights.data.numpy()
+a = reshape(w, (96, 96))
+imshow(a)
+show()
+
 #built-in no weights model
 #ANmodel = models.AlexNet()
 
-x = Variable(torch.from_numpy(im).unsqueeze_(0)).type(dtype_float)
-activations = ANmodel.forward(x)
-weights = ANmodel.features[0].weight
+activ_tr = np.load("activ_train.npy")
+x = Variable(torch.from_numpy(activ_tr)).type(dtype_float)
+#weights = ANmodel.features[0].weight
 
 #step1: draw weights
 
 #describe what happened each layer (there's kinds two layers) 
-'''
+
 def getActivations(dataset):
     ANmodel = MyAlexNet()
     dataset_x, dataset_y = get_data(dataset)
@@ -367,6 +380,7 @@ def getActivations(dataset):
     
     return activations, dataset_y
 
+'''
 weights = ANmodel.features[8].weight
 
 activations, train_y = getActivations(train)
