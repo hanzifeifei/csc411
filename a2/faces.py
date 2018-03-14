@@ -29,8 +29,12 @@ train = np.load("train.npy")
 validate = np.load("validate.npy")
 data = np.load("data.npy")
 
-#====================== Part 8 ===============================
+#=========================================================================#
+#                                Part 9                                   #
+#=========================================================================#
 
+
+#------------------get data-----------------------------------------------
 #download data and remove bad images according to hash
 def download_images():
 
@@ -217,6 +221,7 @@ def seperate_dataset(data):
     return [train, validate, test]
 
 
+#---------------------------format x, y ----------------------------------------
 
 #get data output to x and y and encode using ONE HOT encoding
 def get_data(dataset):
@@ -253,7 +258,7 @@ def get_data(dataset):
     return np.array(x), np.array(y)
 
 
-
+#---------------------------train data------------------------------------------
 dtype_float = torch.FloatTensor
 dtype_long = torch.LongTensor
 
@@ -303,13 +308,14 @@ for t in range(10000):
     if t%100 == 0:
         print("iteration--" + str(t))
 
+#------------------------------ test data --------------------------------------
 #compute test data result                        
 y_pred = model(x_test).data.numpy()
 #get performance 
 print(np.mean(np.argmax(y_pred, 1) == np.argmax(test_y, 1)))
 
 
-#plot learning curves
+#----------------------plot learning curves-------------------------------------
 def learning_curve():
 
     #store lrarining rate 
@@ -369,7 +375,9 @@ def learning_curve():
     
 
 
-#===================Part 9=======================================
+#=========================================================================#
+#                                Part 9                                   #
+#=========================================================================#
 def draw_weights():
     y_pred = model(x_test).data.numpy()
     y_index = np.argmax(y_pred, 1)

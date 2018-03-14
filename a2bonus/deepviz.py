@@ -78,7 +78,7 @@ def rgb2gray(rgb):
     
     return gray/255.
 
-testfile = urllib.request.FancyURLopener() 
+#testfile = urllib.request.FancyURLopener() 
   
 def get_raw(textfile, gender):  
     data = {}    
@@ -355,9 +355,9 @@ ANmodel = MyAlexNet()
 
 weights = ANmodel.forward(im_v)
 w = weights.data.numpy()
-a = reshape(w, (96, 96))
-imshow(a)
-show()
+#a = reshape(w, (96, 96))
+#imshow(a)
+#show()
 
 #built-in no weights model
 #ANmodel = models.AlexNet()
