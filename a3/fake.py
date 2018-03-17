@@ -2,6 +2,7 @@ import numpy as np
 import operator
 import math
 import random
+from build_sets import *
 
 #=============== PART 1 ================================#
 
@@ -88,7 +89,8 @@ for i in range(len(train_fake)):
             word_list[word] = [word_list[word][0], word_list[word][1] + 1]
 
 
-def Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p):
+#def Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p):
+def Naive_Bayes_classifier(headline, word_list, training_set, training_label, m, p):
     """
     predicting whether a headline is real or fake.
     """
@@ -107,10 +109,10 @@ def Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p):
         P_word_i_real = (word_list[i][0]+m*p)/float(count_real + 1)
         P_word_i_fake = (word_list[i][1]+m*p)/float(count_fake + 1)
         
-        if word in headline:
+        if i in headline:
             prob_word_real.append(P_word_i_real)
             prob_word_fake.append(P_word_i_fake)
-        elif word not in headline:
+        elif i not in headline:
             prob_word_real.append(1. - P_word_i_real)
             prob_word_fake.append(1. - P_word_i_fake)
     
@@ -147,18 +149,18 @@ def test_part2():
     m = 1
     p = 0.1
     
-    #count_train = 0
-    #n_train = len(train_real) + len(train_fake)
-    #for headline in train_real:
-        #result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
-        #if result == "real":
-            #count_train += 1
-    #for headline in train_fake:
-        #result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
-        #if result == "fake":
-            #count_train += 1
-    #performance_train = count_train / float(n_train) * 100
-    #print("The performance of the Naive Bayes classifer on the training set is " + str(performance_train) + "%")
+    count_train = 0
+    n_train = len(train_real) + len(train_fake)
+    for headline in train_real:
+        result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
+        if result == "real":
+            count_train += 1
+    for headline in train_fake:
+        result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
+        if result == "fake":
+            count_train += 1
+    performance_train = count_train / float(n_train) * 100
+    print("The performance of the Naive Bayes classifer on the training set is " + str(performance_train) + "%")
     
     count_val = 0
     n_val = len(validate_real) + len(validate_fake)
@@ -170,5 +172,19 @@ def test_part2():
         result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
         if result == "fake":
             count_val += 1
-    performance_train = count_val / float(n_val) * 100
-    print("The performance of the Naive Bayes classifer on the validationx set is " + str(performance_train) + "%")    
+    performance_val = count_val / float(n_val) * 100
+    print("The performance of the Naive Bayes classifer on the validationx set is " + str(performance_val) + "%")  
+    
+    count_test = 0
+    n_test = len(test_real) + len(test_fake)
+    for headline in test_real:
+        result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
+        if result == "real":
+            count_val += 1
+    for headline in test_fake:
+        result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
+        if result == "fake":
+            count_val += 1
+    performance_test = count_val / float(n_val) * 100
+    print("The performance of the Naive Bayes classifer on the test set is " + str(performance_test) + "%")     
+    
