@@ -3,6 +3,7 @@ import operator
 import math
 import random
 from build_sets import *
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 #=============== PART 1 ================================#
 
@@ -106,7 +107,9 @@ def Naive_Bayes_classifier(headline, word_list, training_set, training_label, m,
     prob_word_real = []
     prob_word_fake = []
     for i in word_list.keys():
+        #P(word_i|real)
         P_word_i_real = (word_list[i][0]+m*p)/float(count_real + 1)
+        #P(word_i|fake)
         P_word_i_fake = (word_list[i][1]+m*p)/float(count_fake + 1)
         
         if i in headline:
@@ -117,7 +120,7 @@ def Naive_Bayes_classifier(headline, word_list, training_set, training_label, m,
             prob_word_fake.append(1. - P_word_i_fake)
     
     #conditional independence is assumed by Naive Bayes
-    #do multiplication
+    #do multiplication to get P(words|real) and P(words|fake)
     multi_real = 0
     for p in prob_word_real:
         multi_real += math.log(p)
@@ -131,19 +134,15 @@ def Naive_Bayes_classifier(headline, word_list, training_set, training_label, m,
     prob_real_words = prob_real * multi_real
     prob_fake_words = prob_fake * multi_fake
     
+    
+    #probability that the given headline is fake, P(fake|words)
+    prob = prob_fake_words/ (prob_fake_words + prob_real_words)
+    
     result = "real"
-    #probability that the given headline is fake
-    if (prob_fake_words + prob_real_words) == 0:
+    if prob > 0.5:
         result = "fake"
-        return result, 0.0
-    else:
-        prob = prob_fake_words/ (prob_fake_words + prob_real_words)
-        
-        
-        if prob > 0.5:
-            result = "fake"
-        
-        return result, prob
+    
+    return result, prob
 
 def test_part2():
     m = 1
@@ -180,11 +179,90 @@ def test_part2():
     for headline in test_real:
         result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
         if result == "real":
-            count_val += 1
+            count_test += 1
     for headline in test_fake:
         result, prob_fake = Naive_Bayes_classifier(headline, word_list, train_real, train_fake, m, p)
         if result == "fake":
-            count_val += 1
-    performance_test = count_val / float(n_val) * 100
+            count_test += 1
+    performance_test = count_test / float(n_test) * 100
     print("The performance of the Naive Bayes classifer on the test set is " + str(performance_test) + "%")     
     
+#=============== PART 3 ================================#
+#part 3a
+
+def part3a(word_list):
+    """
+    compute P(real|word), P(real|~word), P(fake|word), P(fake|~word), and print the top ten for each
+    """
+    
+    words = np.array([])
+    prob_real_word = np.array([])
+    prob_real_not_word = np.array([])
+    prob_fake_word = np.array([])
+    prob_fake_not_word = np.array([])
+    
+    #compute P(fake|word) for all words
+    for word in word_list.keys():
+        words = np.append(words, word)
+        word = list(word)
+        result, prob_fake = Naive_Bayes_classifier(word, word_list, train_real, train_fake, 1, 0.1)
+        prob_fake_word = np.append(prob_fake_word, prob_fake)
+    
+    #compute P(real|word) for all words
+    for i in range(len(prob_fake_word)):
+        prob_real_word = np.append(prob_real_word, 1 - prob_fake_word[i])
+        
+    #compute P(fake|~word) for all words
+    for word in words:
+        #P(fake|~word) = P(fake|all words) - P(fake|word)
+        P_fake_words = np.sum(prob_fake_word)
+        P_fake_word = prob_fake_word[np.where(words == word)]
+        prob_fake_not_word = np.append(prob_fake_not_word, (P_fake_words - P_fake_word)/P_fake_words)
+    
+    #compute P(real|~word) for all words
+    for word in words:
+        #P(real|~word) = P(real|all words) - P(real|word)
+        P_real_words = np.sum(prob_real_word)
+        P_real_word = prob_real_word[np.where(words == word)]
+        prob_real_not_word = np.append(prob_real_not_word, (P_real_words - P_real_word)/P_real_words)
+    
+    # print(words.shape, P_fake_given_word.shape, P_fake_given_not_word.shape, P_real_given_word.shape, P_real_given_not_word.shape)
+    
+    real_presence = dict(zip(words, prob_real_word))
+    real_absence = dict(zip(words, prob_real_not_word))
+    fake_presence = dict(zip(words, prob_fake_word))
+    fake_absence = dict(zip(words, prob_fake_not_word))
+    
+    real_presence = sorted(real_presence.items(), key=operator.itemgetter(1))
+    real_absence = sorted(real_absence.items(), key=operator.itemgetter(1))
+    fake_presence = sorted(fake_presence.items(), key=operator.itemgetter(1))
+    fake_absence = sorted(fake_absence.items(), key=operator.itemgetter(1))
+       
+    print("List the 10 words whose presence most strongly predicts that the news is real:")
+    top10(real_presence)
+    print("List the 10 words whose absence most strongly predicts that the news is real:")
+    top10(real_absence)
+    print("List the 10 words whose presence most strongly predicts that the news is fake:")
+    top10(fake_presence)
+    print("List the 10 words whose absence most strongly predicts that the news is fake:")
+    top10(fake_absence)
+
+def top10(rank):
+    """
+    print the top ten word in an array
+    """
+    i = -1
+    while i > -11:    
+        print(rank[i])
+        i -= 1
+        
+#part3b
+def part3b():
+    for word in ENGLISH_STOP_WORDS:
+        if word in word_list: 
+            del word_list[word]
+    
+    part3a(word_list)
+    
+    
+#=============== PART 4 ================================#
