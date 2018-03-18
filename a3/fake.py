@@ -43,19 +43,19 @@ fake_freq = dict(zip(unique_fake, counts_fake))
 sorted_real = sorted(real_freq.items(), key=operator.itemgetter(1))
 sorted_fake = sorted(fake_freq.items(), key=operator.itemgetter(1))
 
-#print the top three words for each list
+#print the top words for each list
 def top():
     i = -1
-    while i > -16:
+    while i > -10:
         print("real" + str(sorted_real[i]))
         i = i -1
     j = -1
-    while j > -16:
+    while j > -10:
         print("fake" + str(sorted_fake[j]))
         j = j -1    
 
 #split the datas into train, validate, and test set by random
-random.seed(42)
+random.seed(0)
 
 random.shuffle(fake)
 random.shuffle(real)
