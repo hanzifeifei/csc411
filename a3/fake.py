@@ -340,11 +340,12 @@ def part7():
         print("Max depth is: " + str(depth))
         print("Training: " + str(100*clf.score(training_set, training_label)) + " Validation: " + str(100*clf.score(validation_set, validation_label)))
         
-    #Highest accuracy is achived at max_depth 500
+    #Highest accuracy is achived at max_depth 300
     clf = tree.DecisionTreeClassifier(max_depth=300)
     clf = clf.fit(training_set, training_label)    
 
     #part7b
+    #----------visualize the first two layers of the decision tree
     word = []
     for i in word_index.keys():
         word.append(i)  
