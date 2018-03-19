@@ -1,27 +1,35 @@
+from pylab import *
 import numpy as np
 import operator
 import math
 import random
+import torch
+from torch.autograd import Variable
+import torch.nn.functional as F
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from sklearn import tree
-import graphviz 
+#import graphviz 
 
+Allwords = set()
 #=============== PART 1 ================================#
 
 #get all the lines
 real = []
 words_real = []
 for line in open("clean_real.txt"): #get real titles\
-    real.append(np.array(line.split()))
+    l = line.split()
+    real.append(np.array(l))
+    Allwords = Allwords.union(set(l))
 real = np.array(real)
 
 
 fake = []
 words_fake = []
 for line in open("clean_fake.txt"): #get fake titles\
-    fake.append(line.split()) 
+    l = line.split()
+    fake.append(l) 
+    Allwords = Allwords.union(set(l))
 fake = np.array(fake)
-
 
 words_real = []
 for headline in real:
@@ -266,7 +274,226 @@ def part3b():
     
     
 #=============== PART 4 ================================#
+#===============logistic regression=====================# 
 
+#Step1: formulate x and Y
+def generateXY(real_data,fake_data):
+    words = list(Allwords)
+    x = []
+    y = []
+    k = len(words)
+    for i in range(len(real_data)):
+        y.append(1)
+    
+    for i in range(len(fake_data)):
+        y.append(0)
+    y = np.array(y)
+    
+    #x = np.concatenate((real_data, fake_data), axis=0)
+    for element in real_data:
+        line = np.zeros(k)
+        for w in element:
+            index = words.index(w)
+            line[index] = 1
+        x.append(line)
+    
+    for element in fake_data:
+        line = np.zeros(k)
+        for w in element:
+            index = words.index(w)
+            line[index] = 1        
+        x.append(line)    
+    
+    x = np.array(x)
+    
+    return x,y
+
+#Step2: model building using pytorch
+words = list(Allwords)
+dtype_float = torch.FloatTensor
+class Model(torch.nn.Module):
+    def __init__(self):
+        super(Model, self).__init__()
+        self.linear = torch.nn.Linear(len(words), 1)
+    
+    def forward(self, x):
+        y_pred = F.sigmoid(self.linear(x))
+        return y_pred
+
+#Step3: trian
+def train_part4(learning_rate, numIterations, r_decay, w_decay):
+    x,y = generateXY(train_real,train_fake) 
+    
+    x_data = Variable(torch.from_numpy(x)).type(dtype_float)
+    y_data = Variable(torch.from_numpy(y)).type(dtype_float)
+    
+    model = Model()
+    
+    #criterion = torch.nn.CrossEntropyLoss(size_average=True)
+    criterion = torch.nn.BCELoss(size_average=True)
+    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
+    #L2 penalty
+    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, lr_decay=r_decay, weight_decay=w_decay)
+    
+    for epoch in range(numIterations):
+        y_pred = model(x_data)
+        
+        loss = criterion(y_pred, y_data)
+        print(epoch, loss.data[0])
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    
+    return model
+  
+#Step4: test
+def test_part4(learning_rate, numIterations, r_decay, w_decay):
+    model = train_part4(learning_rate, numIterations, r_decay, w_decay)
+    x,y = generateXY(test_real,test_fake) 
+    
+    x_test = Variable(torch.Tensor(x)) 
+    
+    y_test = model(x_test).data.numpy()
+    y_test[y_test >= 0.5] = 1
+    y_test[y_test < 0.5] = 0
+    
+    print(np.mean(y_test == y) * 100)
+
+#Step5: Plot Learning Curve VS Iteration
+def learning_curve():
+    iterations = []
+    test_performance = []
+    train_performance = []
+    validate_performance = []
+    
+    learning_rate = 0.001
+    numIterations = 10000
+    r_decay = 0.01
+    w_decay = 2.00
+    
+    #generate train x,y
+    x,y = generateXY(test_real,test_fake) 
+    x_data = Variable(torch.Tensor(x))
+    y_data = Variable(torch.Tensor(y))
+    
+    #generate test x, y
+    x,y_test_correct = generateXY(test_real,test_fake) 
+    x_test = Variable(torch.Tensor(x)) 
+    
+    #generate test x, y
+    x,y_validate_correct = generateXY(validate_real,validate_fake) 
+    x_validate = Variable(torch.Tensor(x)) 
+     
+    model = Model()
+    
+    criterion = torch.nn.BCELoss(size_average=True)
+    #criterion = torch.nn.CrossEntropyLoss(size_average=True)
+    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, lr_decay=r_decay, weight_decay=w_decay)
+    
+    for epoch in range(numIterations):
+        y_pred = model(x_data)
+        
+        loss = criterion(y_pred, y_data)
+        print(epoch, loss.data[0])
+        
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()    
+        
+        #store iterations in list
+        iterations.append(epoch)
+        
+        #compute train result and performance store in list 
+        y_train = model(x_data).data.numpy()
+        y_train[y_train >= 0.5] = 1
+        y_train[y_train < 0.5] = 0
+        accuracyTrain = np.mean(y_train == y) * 100    
+        train_performance.append(accuracyTrain)
+        
+        #compute test result and performance store in list 
+        y_test = model(x_test).data.numpy()
+        y_test[y_test >= 0.5] = 1
+        y_test[y_test < 0.5] = 0
+        accuracyTest = np.mean(y_test == y_test_correct) * 100    
+        test_performance.append(accuracyTest)
+        
+        #compute validate result and performance store in list 
+        y_validate = model(x_validate).data.numpy()
+        y_validate[y_validate >= 0.5] = 1
+        y_validate[y_validate < 0.5] = 0
+        accuracyvalidate = np.mean(y_validate == y_validate_correct) * 100    
+        validate_performance.append(accuracyvalidate)  
+        
+    #plot the learning curve 
+    plt.plot(iterations, train_performance, color='blue', label="training set")
+    plt.plot(iterations, test_performance, color='green', label="test set")
+    plt.plot(iterations, validate_performance, color='red', label="validation set")
+    plt.xlabel('Number of Iterations', fontsize=12)
+    plt.ylabel('Performance(%)', fontsize=12)
+    plt.legend(loc='top left')
+    plt.show()
+    
+#=======================Part 6===========================================#
+#Part 6 - a
+def part6a():
+    learning_rate = 0.001
+    numIterations = 10000
+    r_decay = 0.01
+    w_decay = 2.00
+    
+    model = train_part4(learning_rate, numIterations, r_decay, w_decay)
+    
+    con = []
+    for content in model.parameters():
+        con.append(content)
+    
+    
+    parameters = con[0].data[0].numpy().tolist()
+    
+    param_words = dict(zip(words, parameters))
+        
+    #sort the dictionary by parameter size 
+    sorted_param = sorted(param_words.items(), key=operator.itemgetter(1))    
+    
+    print("List of Top 10 negative thetas:")
+    print(sorted_param[:10])
+    
+    print("List of Top 10 positive thetas:")
+    print(sorted_param[-10:])    
+    
+#filter out all the STOP words
+def part6b():
+    new_words = list(words)
+    for word in ENGLISH_STOP_WORDS:
+        if word in words: 
+            new_words.remove(word)
+        
+    learning_rate = 0.001
+    numIterations = 10000
+    r_decay = 0.01
+    w_decay = 2.00
+    
+    model = train_part4(learning_rate, numIterations, r_decay, w_decay)
+    
+    con = []
+    for content in model.parameters():
+        con.append(content)
+    
+    
+    parameters = con[0].data[0].numpy().tolist()
+    
+    param_words = dict(zip(new_words, parameters))
+        
+    #sort the dictionary by parameter size 
+    sorted_param = sorted(param_words.items(), key=operator.itemgetter(1))    
+    
+    print("List of Top 10 negative thetas without STOP WORDS:")
+    print(sorted_param[:10])
+    
+    print("List of Top 10 positive thetas without STOP WORDS:")
+    print(sorted_param[-10:])  
+    
 
 
 
