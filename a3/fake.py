@@ -444,7 +444,6 @@ def learning_curve():
     input_size = num_words
     numIterations = 1000
     num_classes = 2
-    reg_lambda = 0.01
     
     x_data = Variable(torch.from_numpy(training_x), requires_grad=False).type(torch.FloatTensor)
     y_data = Variable(torch.from_numpy(np.argmax(training_y, 1)), requires_grad=False).type(torch.LongTensor)
