@@ -46,21 +46,19 @@ unique_real, counts_real = np.unique(words_real, return_counts=True)
 real_freq = dict(zip(unique_real, counts_real))
 unique_fake, counts_fake = np.unique(words_fake, return_counts=True)
 fake_freq = dict(zip(unique_fake, counts_fake))
-    
-#sort the dictionary by frequency
-sorted_real = sorted(real_freq.items(), key=operator.itemgetter(1))
-sorted_fake = sorted(fake_freq.items(), key=operator.itemgetter(1))
 
-#print the top words for each list
-def top():
-    i = -1
-    while i > -10:
-        print("real" + str(sorted_real[i]))
-        i = i -1
-    j = -1
-    while j > -10:
-        print("fake" + str(sorted_fake[j]))
-        j = j -1    
+def part1():
+    """
+    choose words hillary, trumps and says as examples.
+    """
+    print("real:")
+    print("('hillary', " + str(real_freq["hillary"]) + ")")
+    print("('trumps', " + str(real_freq["trumps"]) + ")")
+    print("('says', " + str(real_freq["says"]) + ")")
+    print("fake:")
+    print("('hillary', " + str(fake_freq["hillary"]) + ")")
+    print("('trumps', " + str(fake_freq["trumps"]) + ")")
+    print("('says', " + str(fake_freq["says"]) + ")") 
 
 #split the datas into train, validate, and test set by random
 random.seed(0)
@@ -212,7 +210,7 @@ def test_part2():
 #=============== PART 3 ================================#
 #part 3a
 
-def part3a(word_list):
+def part3():
     """
     compute P(real|word), P(real|~word), P(fake|word), P(fake|~word), and print the top ten for each
     """
@@ -254,6 +252,41 @@ def part3a(word_list):
     top10(fake_presence)
     print("List the 10 words whose absence most strongly predicts that the news is fake:")
     top10(fake_absence)
+    
+    #-------- part 3b ----------------------
+    
+    real_presence = dict(zip(words, prob_real_word))
+    real_absence = dict(zip(words, prob_real_not_word))
+    fake_presence = dict(zip(words, prob_fake_word))
+    fake_absence = dict(zip(words, prob_fake_not_word)) 
+    
+    for word in ENGLISH_STOP_WORDS:
+        if word in real_presence: 
+            del real_presence[word]
+    for word in ENGLISH_STOP_WORDS:
+        if word in real_absence: 
+            del real_absence[word]
+    for word in ENGLISH_STOP_WORDS:
+        if word in fake_presence: 
+            del fake_presence[word]    
+    for word in ENGLISH_STOP_WORDS:
+        if word in fake_absence: 
+            del fake_absence[word] 
+    
+    real_presence = sorted(real_presence.items(), key=operator.itemgetter(1))
+    real_absence = sorted(real_absence.items(), key=operator.itemgetter(1))
+    fake_presence = sorted(fake_presence.items(), key=operator.itemgetter(1))
+    fake_absence = sorted(fake_absence.items(), key=operator.itemgetter(1))    
+    
+    print("Part3b:")      
+    print("List the 10 words whose presence most strongly predicts that the news is real:")
+    top10(real_presence)
+    print("List the 10 words whose absence most strongly predicts that the news is real:")
+    top10(real_absence)
+    print("List the 10 words whose presence most strongly predicts that the news is fake:")
+    top10(fake_presence)
+    print("List the 10 words whose absence most strongly predicts that the news is fake:")
+    top10(fake_absence)        
 
 def top10(rank):
     """
@@ -263,50 +296,77 @@ def top10(rank):
     while i > -11:    
         print(rank[i])
         i -= 1
-        
-#part3b
-def part3b():
-    for word in ENGLISH_STOP_WORDS:
-        if word in word_list: 
-            del word_list[word]
-    
-    part3a(word_list)
-    
+
     
 #=============== PART 4 ================================#
 #===============logistic regression=====================# 
 
 #Step1: formulate x and Y
-def generateXY(real_data,fake_data):
-    words = list(Allwords)
-    x = []
-    y = []
-    k = len(words)
-    for i in range(len(real_data)):
-        y.append(1)
+def generateXY():    
+    training = np.append(train_real, train_fake)
+    training_label = [1] * len(train_real) + [0] * len(train_fake)
     
-    for i in range(len(fake_data)):
-        y.append(0)
-    y = np.array(y)
+    validation = np.append(validate_real, validate_fake)
+    validation_label = [1] * len(validate_real) + [0] * len(validate_fake)
     
-    #x = np.concatenate((real_data, fake_data), axis=0)
-    for element in real_data:
-        line = np.zeros(k)
-        for w in element:
-            index = words.index(w)
-            line[index] = 1
-        x.append(line)
+    test = np.append(test_real, test_fake)
+    test_label = [1] * len(test_real) + [0] * len(test_fake)
     
-    for element in fake_data:
-        line = np.zeros(k)
-        for w in element:
-            index = words.index(w)
-            line[index] = 1        
-        x.append(line)    
+    #assign each word a unique number and save the number of total unique words as num_words
+    word_index = {}
+    num_words = 0
+    for headline in training:
+        for word in headline:
+            if word not in word_index: 
+                word_index[word] = num_words
+                num_words += 1
+    for headline in validation:
+        for word in headline:
+            if word not in word_index: 
+                word_index[word] = num_words
+                num_words += 1
+    for headline in test:
+        for word in headline:
+            if word not in word_index: 
+                word_index[word] = num_words
+                num_words += 1    
+
+    training_x = np.zeros((0, num_words))
+    validation_x = np.zeros((0, num_words)) 
+    test_x = np.zeros((0, num_words))
     
-    x = np.array(x)
+    for headline in training:
+        i = np.zeros(num_words)
+        for word in headline:
+            i[word_index[word]] = 1.
+        i = np.reshape(i, [1, num_words])
+        training_x = np.vstack((training_x, i))
+    for headline in validation:
+        i = np.zeros(num_words)
+        for word in headline:
+            i[word_index[word]] = 1.
+        i = np.reshape(i, [1, num_words])
+        validation_x = np.vstack((validation_x, i))
+    for headline in test:
+        i = np.zeros(num_words)
+        for word in headline:
+            i[word_index[word]] = 1.
+        i = np.reshape(i, [1, num_words])
+        test_x = np.vstack((test_x, i))    
     
-    return x,y
+    training_y = np.asarray(training_label)
+    training_y_complement = 1 - training_y
+    training_y = np.vstack((training_y, training_y_complement)).transpose() 
+    
+    validation_y = np.asarray(validation_label)
+    validation_y_complement = 1 - validation_y
+    validation_y = np.vstack((validation_y, validation_y_complement)).transpose() 
+    
+    test_y = np.asarray(test_label)
+    test_y_complement = 1 - test_y
+    test_y = np.vstack((test_y, test_y_complement)).transpose()     
+    
+    return training_x, validation_x, test_x, training_y, validation_y, test_y, num_words
 
 #Step2: model building using pytorch
 words = list(Allwords)
@@ -317,7 +377,7 @@ class Model(torch.nn.Module):
         self.linear = torch.nn.Linear(len(words), 1)
     
     def forward(self, x):
-        y_pred = F.sigmoid(self.linear(x))
+        y_pred = self.linear(x)
         return y_pred
 
 #Step3: trian
@@ -333,7 +393,7 @@ def train_part4(learning_rate, numIterations, r_decay, w_decay):
     criterion = torch.nn.BCELoss(size_average=True)
     #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
     #L2 penalty
-    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, lr_decay=r_decay, weight_decay=w_decay)
+    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, lr_decay=r_decay, weight_decay=w_decay)    
     
     for epoch in range(numIterations):
         y_pred = model(x_data)
@@ -359,47 +419,54 @@ def test_part4(learning_rate, numIterations, r_decay, w_decay):
     y_test[y_test < 0.5] = 0
     
     print(np.mean(y_test == y) * 100)
+    
+class LogisticRegression(torch.nn.Module):
+    def __init__(self, input_size, num_classes):
+        super(LogisticRegression, self).__init__()
+        self.linear = torch.nn.Linear(input_size, num_classes)
+    
+    def forward(self, x):
+        y_pred = self.linear(x)
+        return y_pred
 
 #Step5: Plot Learning Curve VS Iteration
 def learning_curve():
+    
+    #generate x,y
+    training_x, validation_x, test_x, training_y, validation_y, test_y, num_words = generateXY()
+    
     iterations = []
     test_performance = []
     train_performance = []
     validate_performance = []
     
     learning_rate = 0.001
-    numIterations = 10000
-    r_decay = 0.01
-    w_decay = 2.00
+    input_size = num_words
+    numIterations = 1000
+    num_classes = 2
+    reg_lambda = 0.01
     
-    #generate train x,y
-    x,y = generateXY(test_real,test_fake) 
-    x_data = Variable(torch.Tensor(x))
-    y_data = Variable(torch.Tensor(y))
-    
-    #generate test x, y
-    x,y_test_correct = generateXY(test_real,test_fake) 
-    x_test = Variable(torch.Tensor(x)) 
+    x_data = Variable(torch.from_numpy(training_x), requires_grad=False).type(torch.FloatTensor)
+    y_data = Variable(torch.from_numpy(np.argmax(training_y, 1)), requires_grad=False).type(torch.LongTensor)
     
     #generate test x, y
-    x,y_validate_correct = generateXY(validate_real,validate_fake) 
-    x_validate = Variable(torch.Tensor(x)) 
+    x_test = Variable(torch.from_numpy(test_x), requires_grad=False).type(torch.FloatTensor) 
+    
+    #generate test x, y
+    x_validate = Variable(torch.from_numpy(validation_x), requires_grad=False).type(torch.FloatTensor)
      
-    model = Model()
+    #model = Model()
+    model = LogisticRegression(input_size, num_classes)
     
-    criterion = torch.nn.BCELoss(size_average=True)
-    #criterion = torch.nn.CrossEntropyLoss(size_average=True)
-    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, lr_decay=r_decay, weight_decay=w_decay)
+    criterion = torch.nn.CrossEntropyLoss()  
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)     
     
     for epoch in range(numIterations):
-        y_pred = model(x_data)
-        
-        loss = criterion(y_pred, y_data)
-        print(epoch, loss.data[0])
-        
         optimizer.zero_grad()
+        y_pred = model(x_data)              
+        loss = criterion(y_pred, y_data)      
         loss.backward()
-        optimizer.step()    
+        optimizer.step()        
         
         #store iterations in list
         iterations.append(epoch)
@@ -408,21 +475,21 @@ def learning_curve():
         y_train = model(x_data).data.numpy()
         y_train[y_train >= 0.5] = 1
         y_train[y_train < 0.5] = 0
-        accuracyTrain = np.mean(y_train == y) * 100    
+        accuracyTrain = np.mean(y_train == training_y) * 100    
         train_performance.append(accuracyTrain)
         
         #compute test result and performance store in list 
         y_test = model(x_test).data.numpy()
         y_test[y_test >= 0.5] = 1
         y_test[y_test < 0.5] = 0
-        accuracyTest = np.mean(y_test == y_test_correct) * 100    
+        accuracyTest = np.mean(y_test == test_y) * 100    
         test_performance.append(accuracyTest)
         
         #compute validate result and performance store in list 
         y_validate = model(x_validate).data.numpy()
         y_validate[y_validate >= 0.5] = 1
         y_validate[y_validate < 0.5] = 0
-        accuracyvalidate = np.mean(y_validate == y_validate_correct) * 100    
+        accuracyvalidate = np.mean(y_validate == validation_y) * 100    
         validate_performance.append(accuracyvalidate)  
         
     #plot the learning curve 
