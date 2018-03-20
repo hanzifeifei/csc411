@@ -8,14 +8,13 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from sklearn import tree
-#import graphviz 
+import graphviz 
 
 Allwords = set()
 #=============== PART 1 ================================#
 
 #get all the lines
 real = []
-words_real = []
 for line in open("clean_real.txt"): #get real titles\
     l = line.split()
     real.append(np.array(l))
@@ -24,7 +23,6 @@ real = np.array(real)
 
 
 fake = []
-words_fake = []
 for line in open("clean_fake.txt"): #get fake titles\
     l = line.split()
     fake.append(l) 
@@ -113,9 +111,7 @@ def Naive_Bayes_classifier(headline, word_list, training_set, training_label, m,
     prob_real = 1.0 - prob_fake
     
     prob_word_real = []
-    prob_word_fake = []
-    prob_not_word_real = []
-    prob_not_word_fake = []    
+    prob_word_fake = []   
     for i in word_list.keys():
         #P(word_i|real)
         P_word_i_real = (word_list[i][0]+m*p)/float(count_real + 1)
@@ -124,14 +120,10 @@ def Naive_Bayes_classifier(headline, word_list, training_set, training_label, m,
         
         if i in headline:
             prob_word_real.append(P_word_i_real)
-            prob_word_fake.append(P_word_i_fake)
-            prob_not_word_real.append(1. - P_word_i_real)
-            prob_not_word_fake.append(1. - P_word_i_fake)            
+            prob_word_fake.append(P_word_i_fake)           
         elif i not in headline:
             prob_word_real.append(1. - P_word_i_real)
-            prob_word_fake.append(1. - P_word_i_fake)
-            prob_not_word_real.append(P_word_i_real)
-            prob_not_word_fake.append(P_word_i_fake)            
+            prob_word_fake.append(1. - P_word_i_fake)           
     
     #conditional independence is assumed by Naive Bayes
     #do multiplication to get P(words|real) and P(words|fake)
@@ -638,3 +630,35 @@ def part7():
     dot_data = tree.export_graphviz(clf, out_file=None, max_depth=2, filled=True, rounded=True, class_names=['fake', 'real'], feature_names=word)
     graph = graphviz.Source(dot_data)
     graph.render(view=True)
+
+
+#=============== PART 8 ================================#
+
+def part8b():
+    real_with_word = []
+    for headline in train_real:
+        if "trumps" in list(headline):
+            real_with_word.append(headline)
+            
+    with_word_real_split = len(real_with_word)
+    without_word_real_split = len(train_real) - with_word_real_split
+    
+    fake_with_word = []
+    for headline in train_fake:
+        if "trumps" in list(headline):
+            fake_with_word.append(headline)
+    
+    with_word_fake_split = len(fake_with_word)
+    without_word_fake_split = len(train_fake) - with_word_fake_split
+    
+    print("Number of total headlines: " + str(len(train_real) + len(train_fake)))
+    print("Number of initial fake headlines: " + str(len(train_fake)))
+    print("Number of initial real headlines: " + str(len(train_real)))
+    print("\n")
+    print("Number of headlines without word 'trumps': " + str(without_word_fake_split + without_word_real_split))
+    print("Number of fake headlines in the dataset without word 'trumps': " + str(without_word_fake_split))
+    print("Number of real headlines in the dataset without word 'trumps': " + str(without_word_real_split))
+    print("\n")
+    print("Number of headlines with word 'trumps': " + str(with_word_fake_split + with_word_real_split))
+    print("Number of fake headlines in the dataset with word 'trumps': " + str(with_word_fake_split))
+    print("Number of real headlines in the dataset with word 'trumps': " + str(with_word_real_split))
