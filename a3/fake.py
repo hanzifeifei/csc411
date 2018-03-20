@@ -81,6 +81,7 @@ test_fake = fake[int(math.ceil(len(fake) * 0.85)):]
 #making a word list with the word as key and 
 #number of occurences in real and fake headlines as the value
 word_list = {}
+#value = [real, fake]
 for i in range(len(train_real)):
     headline = set(train_real[i])
     for word in headline:
@@ -300,37 +301,35 @@ def top10(rank):
     
 #=============== PART 4 ================================#
 #===============logistic regression=====================# 
+training = np.append(train_real, train_fake)
+training_label = [1] * len(train_real) + [0] * len(train_fake)
 
+validation = np.append(validate_real, validate_fake)
+validation_label = [1] * len(validate_real) + [0] * len(validate_fake)
+
+test = np.append(test_real, test_fake)
+test_label = [1] * len(test_real) + [0] * len(test_fake)
+
+#assign each word a unique number and save the number of total unique words as num_words
+word_index = {}
+num_words = 0
+for headline in training:
+    for word in headline:
+        if word not in word_index: 
+            word_index[word] = num_words
+            num_words += 1
+for headline in validation:
+    for word in headline:
+        if word not in word_index: 
+            word_index[word] = num_words
+            num_words += 1
+for headline in test:
+    for word in headline:
+        if word not in word_index: 
+            word_index[word] = num_words
+            num_words += 1    
 #Step1: formulate x and Y
 def generateXY():    
-    training = np.append(train_real, train_fake)
-    training_label = [1] * len(train_real) + [0] * len(train_fake)
-    
-    validation = np.append(validate_real, validate_fake)
-    validation_label = [1] * len(validate_real) + [0] * len(validate_fake)
-    
-    test = np.append(test_real, test_fake)
-    test_label = [1] * len(test_real) + [0] * len(test_fake)
-    
-    #assign each word a unique number and save the number of total unique words as num_words
-    word_index = {}
-    num_words = 0
-    for headline in training:
-        for word in headline:
-            if word not in word_index: 
-                word_index[word] = num_words
-                num_words += 1
-    for headline in validation:
-        for word in headline:
-            if word not in word_index: 
-                word_index[word] = num_words
-                num_words += 1
-    for headline in test:
-        for word in headline:
-            if word not in word_index: 
-                word_index[word] = num_words
-                num_words += 1    
-
     training_x = np.zeros((0, num_words))
     validation_x = np.zeros((0, num_words)) 
     test_x = np.zeros((0, num_words))
@@ -369,57 +368,8 @@ def generateXY():
     return training_x, validation_x, test_x, training_y, validation_y, test_y, num_words
 
 #Step2: model building using pytorch
-words = list(Allwords)
 dtype_float = torch.FloatTensor
-class Model(torch.nn.Module):
-    def __init__(self):
-        super(Model, self).__init__()
-        self.linear = torch.nn.Linear(len(words), 1)
-    
-    def forward(self, x):
-        y_pred = self.linear(x)
-        return y_pred
 
-#Step3: trian
-def train_part4(learning_rate, numIterations, r_decay, w_decay):
-    x,y = generateXY(train_real,train_fake) 
-    
-    x_data = Variable(torch.from_numpy(x)).type(dtype_float)
-    y_data = Variable(torch.from_numpy(y)).type(dtype_float)
-    
-    model = Model()
-    
-    #criterion = torch.nn.CrossEntropyLoss(size_average=True)
-    criterion = torch.nn.BCELoss(size_average=True)
-    #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
-    #L2 penalty
-    optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, lr_decay=r_decay, weight_decay=w_decay)    
-    
-    for epoch in range(numIterations):
-        y_pred = model(x_data)
-        
-        loss = criterion(y_pred, y_data)
-        print(epoch, loss.data[0])
-        
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-    
-    return model
-  
-#Step4: test
-def test_part4(learning_rate, numIterations, r_decay, w_decay):
-    model = train_part4(learning_rate, numIterations, r_decay, w_decay)
-    x,y = generateXY(test_real,test_fake) 
-    
-    x_test = Variable(torch.Tensor(x)) 
-    
-    y_test = model(x_test).data.numpy()
-    y_test[y_test >= 0.5] = 1
-    y_test[y_test < 0.5] = 0
-    
-    print(np.mean(y_test == y) * 100)
-    
 class LogisticRegression(torch.nn.Module):
     def __init__(self, input_size, num_classes):
         super(LogisticRegression, self).__init__()
@@ -428,6 +378,51 @@ class LogisticRegression(torch.nn.Module):
     def forward(self, x):
         y_pred = self.linear(x)
         return y_pred
+
+
+#Step3: trian
+def train_part4(learning_rate, numIterations):
+    #generate x,y
+    training_x, validation_x, test_x, training_y, validation_y, test_y, num_words = generateXY()
+    
+    input_size = num_words
+    num_classes = 2    
+    
+    x_data = Variable(torch.from_numpy(training_x), requires_grad=False).type(torch.FloatTensor)
+    y_data = Variable(torch.from_numpy(np.argmax(training_y, 1)), requires_grad=False).type(torch.LongTensor)
+
+    model = LogisticRegression(input_size, num_classes)
+    
+    criterion = torch.nn.CrossEntropyLoss()  
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)     
+
+    for epoch in range(numIterations):
+        optimizer.zero_grad()
+        y_pred = model(x_data)              
+        loss = criterion(y_pred, y_data)      
+        loss.backward()
+        optimizer.step()  
+        
+        print(epoch, loss.data[0])
+
+    
+    return model
+  
+#Step4: test
+def test_part4(learning_rate, numIterations):
+    model = train_part4(learning_rate, numIterations)
+    #generate x,y
+    training_x, validation_x, x, training_y, validation_y, y, num_words = generateXY()
+    
+    
+    x_test = Variable(torch.Tensor(x)) 
+    
+    y_test = model(x_test).data.numpy()
+    y_test[y_test > 0.5] = 1
+    y_test[y_test <= 0.5] = 0
+    
+    print(np.mean(y_test == y) * 100)
+    
 
 #Step5: Plot Learning Curve VS Iteration
 def learning_curve():
@@ -451,7 +446,7 @@ def learning_curve():
     #generate test x, y
     x_test = Variable(torch.from_numpy(test_x), requires_grad=False).type(torch.FloatTensor) 
     
-    #generate test x, y
+    #generate validate x, y
     x_validate = Variable(torch.from_numpy(validation_x), requires_grad=False).type(torch.FloatTensor)
      
     #model = Model()
@@ -469,7 +464,8 @@ def learning_curve():
         
         #store iterations in list
         iterations.append(epoch)
-        
+        if epoch % 100 == 0:
+            print("Iterations" + str(epoch))
         #compute train result and performance store in list 
         y_train = model(x_data).data.numpy()
         y_train[y_train >= 0.5] = 1
@@ -479,15 +475,15 @@ def learning_curve():
         
         #compute test result and performance store in list 
         y_test = model(x_test).data.numpy()
-        y_test[y_test >= 0.5] = 1
-        y_test[y_test < 0.5] = 0
+        y_test[y_test > 0.5] = 1
+        y_test[y_test <= 0.5] = 0
         accuracyTest = np.mean(y_test == test_y) * 100    
         test_performance.append(accuracyTest)
         
         #compute validate result and performance store in list 
         y_validate = model(x_validate).data.numpy()
-        y_validate[y_validate >= 0.5] = 1
-        y_validate[y_validate < 0.5] = 0
+        y_validate[y_validate > 0.5] = 1
+        y_validate[y_validate <= 0.5] = 0
         accuracyvalidate = np.mean(y_validate == validation_y) * 100    
         validate_performance.append(accuracyvalidate)  
         
@@ -505,10 +501,8 @@ def learning_curve():
 def part6a():
     learning_rate = 0.001
     numIterations = 10000
-    r_decay = 0.01
-    w_decay = 2.00
     
-    model = train_part4(learning_rate, numIterations, r_decay, w_decay)
+    model = train_part4(learning_rate, numIterations)
     
     con = []
     for content in model.parameters():
@@ -517,7 +511,7 @@ def part6a():
     
     parameters = con[0].data[0].numpy().tolist()
     
-    param_words = dict(zip(words, parameters))
+    param_words = dict(zip(word_index.keys(), parameters))
         
     #sort the dictionary by parameter size 
     sorted_param = sorted(param_words.items(), key=operator.itemgetter(1))    
@@ -530,18 +524,16 @@ def part6a():
     
 #filter out all the STOP words
 def part6b():
-    new_words = list(words)
+    new_words = list(word_index.keys())
     for word in ENGLISH_STOP_WORDS:
-        if word in words: 
+        if word in new_words: 
             new_words.remove(word)
         
     learning_rate = 0.001
     numIterations = 10000
-    r_decay = 0.01
-    w_decay = 2.00
-    
-    model = train_part4(learning_rate, numIterations, r_decay, w_decay)
-    
+
+    model = train_part4(learning_rate, numIterations)
+
     con = []
     for content in model.parameters():
         con.append(content)
