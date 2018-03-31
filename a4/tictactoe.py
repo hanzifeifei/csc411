@@ -190,12 +190,12 @@ def train(policy, env, gamma=1.0, log_interval=1000):
     running_reward = 0
     
 
-    #episode_axis = []
-    #return_axis = []
+    #number_of_episode = []
+    #average_return = []
 
-    #win_rate_per_episode = []
-    #loss_rate_per_episode = []
-    #tie_rate_per_episode = []
+    #win_rate = []
+    #loss_rate = []
+    #tie_rate = []
 
 
     for i_episode in count(1):
@@ -216,12 +216,12 @@ def train(policy, env, gamma=1.0, log_interval=1000):
         finish_episode(saved_rewards, saved_logprobs, gamma)
 
         if i_episode % log_interval == 0:
-            #episode_axis.extend([i_episode])
-            #return_axis.extend([running_reward/log_interval])
-            #games_won, games_lost, games_tied, invalid_moves = play_games_against_random(policy, env)
-            #win_rate_per_episode.extend([games_won/100.0])
-            #loss_rate_per_episode.extend([games_lost/100.0])
-            #tie_rate_per_episode.extend([games_tied/100.0])            
+            #number_of_episode.extend([i_episode])
+            #average_return.extend([running_reward/log_interval])
+            #won, lost, tied, invalid_moves = play_games_against_random(policy, env)
+            #win_rate.extend([won/100.0])
+            #loss_rate.extend([lost/100.0])
+            #tie_rate.extend([tied/100.0])            
             print('Episode {}\tAverage return: {:.2f}'.format(
                 i_episode,
                 running_reward / log_interval))
@@ -240,21 +240,17 @@ def train(policy, env, gamma=1.0, log_interval=1000):
         if i_episode == 50000:
             ##plot return
             #plt.figure()
-            #plt.plot(episode_axis, return_axis)
+            #plt.plot(number_of_episode, average_return)
             #plt.xlabel("episode #")
             #plt.ylabel("average return")
             #plt.title("Training curve of Tic-Tac-Toe model")
-            #plt.savefig("part5b_256.png")
-
-            ## print(win_rate_per_episode)
-            ## print(loss_rate_per_episode)
-            ## print(tie_rate_per_episode)
+            #plt.savefig("part5b.png")
 
             ##plot win/loss rates
             #plt.figure()
-            #plt.plot(episode_axis, win_rate_per_episode , label = "win rate")
-            #plt.plot(episode_axis, loss_rate_per_episode, label = "loss rate")
-            #plt.plot(episode_axis, tie_rate_per_episode, label = "tie rate")
+            #plt.plot(number_of_episode, win_rate , label = "win rate")
+            #plt.plot(number_of_episode, loss_rate, label = "loss rate")
+            #plt.plot(number_of_episode, tie_rate, label = "tie rate")
             #plt.xlabel("episode #")
             #plt.ylabel("win/loss/tie rates")
             #plt.title("Evolution of Win/Loss/Tie rates with training")
