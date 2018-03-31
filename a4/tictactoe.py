@@ -104,10 +104,17 @@ class Policy(nn.Module):
     """
     def __init__(self, input_size=27, hidden_size=64, output_size=9):
         super(Policy, self).__init__()
-        # TODO
+        self.layer = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, output_size),
+        )        
 
     def forward(self, x):
-        # TODO
+        x = self.layer(x)
+        x = F.softmax(x, dim=-1)
+        return x
+
 
 def select_action(policy, state):
     """Samples an action from the policy at the state."""
@@ -135,7 +142,16 @@ def compute_returns(rewards, gamma=1.0):
     >>> compute_returns([0,-0.5,5,0.5,-10], 0.9)
     [-2.5965000000000003, -2.8850000000000002, -2.6500000000000004, -8.5, -10.0]
     """
-    # TODO
+    size = len(rewards)
+    result = [0] * size
+    i = size - 1
+    while i >= 0:
+        if i == size - 1:
+            result[i] = float(rewards[i])
+        else:
+            result[i] = rewards[i] + gamma * result[i+1]
+        i -= 1
+    return result
 
 def finish_episode(saved_rewards, saved_logprobs, gamma=1.0):
     """Samples an action from the policy at the state."""
@@ -155,11 +171,11 @@ def finish_episode(saved_rewards, saved_logprobs, gamma=1.0):
 def get_reward(status):
     """Returns a numeric given an environment status."""
     return {
-            Environment.STATUS_VALID_MOVE  : 0, # TODO
-            Environment.STATUS_INVALID_MOVE: 0,
-            Environment.STATUS_WIN         : 0,
-            Environment.STATUS_TIE         : 0,
-            Environment.STATUS_LOSE        : 0
+            Environment.STATUS_VALID_MOVE  : 1, # TODO
+            Environment.STATUS_INVALID_MOVE: -20,
+            Environment.STATUS_WIN         : 50,
+            Environment.STATUS_TIE         : -1,
+            Environment.STATUS_LOSE        : -10
     }[status]
 
 def train(policy, env, gamma=1.0, log_interval=1000):
@@ -168,6 +184,15 @@ def train(policy, env, gamma=1.0, log_interval=1000):
     scheduler = torch.optim.lr_scheduler.StepLR(
             optimizer, step_size=10000, gamma=0.9)
     running_reward = 0
+    
+
+    #episode_axis = []
+    #return_axis = []
+
+    #win_rate_per_episode = []
+    #loss_rate_per_episode = []
+    #tie_rate_per_episode = []
+
 
     for i_episode in count(1):
         saved_rewards = []
@@ -187,6 +212,12 @@ def train(policy, env, gamma=1.0, log_interval=1000):
         finish_episode(saved_rewards, saved_logprobs, gamma)
 
         if i_episode % log_interval == 0:
+            #episode_axis.extend([i_episode])
+            #return_axis.extend([running_reward/log_interval])
+            #games_won, games_lost, games_tied, invalid_moves = play_games_against_random(policy, env)
+            #win_rate_per_episode.extend([games_won/100.0])
+            #loss_rate_per_episode.extend([games_lost/100.0])
+            #tie_rate_per_episode.extend([games_tied/100.0])            
             print('Episode {}\tAverage return: {:.2f}'.format(
                 i_episode,
                 running_reward / log_interval))
@@ -200,6 +231,34 @@ def train(policy, env, gamma=1.0, log_interval=1000):
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
+        
+        
+        if i_episode == 50000:
+            ##plot return
+            #plt.figure()
+            #plt.plot(episode_axis, return_axis)
+            #plt.xlabel("episode #")
+            #plt.ylabel("average return")
+            #plt.title("Training curve of Tic-Tac-Toe model")
+            #plt.savefig("part5b_256.png")
+
+            ## print(win_rate_per_episode)
+            ## print(loss_rate_per_episode)
+            ## print(tie_rate_per_episode)
+
+            ##plot win/loss rates
+            #plt.figure()
+            #plt.plot(episode_axis, win_rate_per_episode , label = "win rate")
+            #plt.plot(episode_axis, loss_rate_per_episode, label = "loss rate")
+            #plt.plot(episode_axis, tie_rate_per_episode, label = "tie rate")
+            #plt.xlabel("episode #")
+            #plt.ylabel("win/loss/tie rates")
+            #plt.title("Evolution of Win/Loss/Tie rates with training")
+            #plt.legend()
+            #plt.savefig("part6.png")
+            
+            return
+        
 
 
 def first_move_distr(policy, env):
