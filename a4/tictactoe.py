@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.distributions
 from torch.autograd import Variable
+import matplotlib.pyplot as plt
 
 #np.random.seed(0)
 #random.seed(0)
@@ -175,14 +176,14 @@ def finish_episode(saved_rewards, saved_logprobs, gamma=1.0):
 def get_reward(status):
     """Returns a numeric given an environment status."""
     return {
-            Environment.STATUS_VALID_MOVE  : 1, # TODO
-            Environment.STATUS_INVALID_MOVE: -20,
+            Environment.STATUS_VALID_MOVE  : 10, 
+            Environment.STATUS_INVALID_MOVE: -10,
             Environment.STATUS_WIN         : 50,
-            Environment.STATUS_TIE         : -1,
-            Environment.STATUS_LOSE        : -10
+            Environment.STATUS_TIE         : 0,
+            Environment.STATUS_LOSE        : -50
     }[status]
 
-def train(policy, env, gamma=1.0, log_interval=1000):
+def train(policy, env, gamma=0.75, log_interval=1000):
     """Train policy gradient."""
     optimizer = optim.Adam(policy.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.StepLR(
@@ -190,12 +191,12 @@ def train(policy, env, gamma=1.0, log_interval=1000):
     running_reward = 0
     
 
-    #number_of_episode = []
-    #average_return = []
+    number_of_episode = []
+    average_return = []
 
-    #win_rate = []
-    #loss_rate = []
-    #tie_rate = []
+    win_rate = []
+    lose_rate = []
+    tie_rate = []
 
 
     for i_episode in count(1):
@@ -209,19 +210,19 @@ def train(policy, env, gamma=1.0, log_interval=1000):
             reward = get_reward(status)
             saved_logprobs.append(logprob)
             saved_rewards.append(reward)
-
+         
         R = compute_returns(saved_rewards)[0]
         running_reward += R
 
         finish_episode(saved_rewards, saved_logprobs, gamma)
 
         if i_episode % log_interval == 0:
-            #number_of_episode.extend([i_episode])
-            #average_return.extend([running_reward/log_interval])
-            #won, lost, tied, invalid_moves = play_games_against_random(policy, env)
-            #win_rate.extend([won/100.0])
-            #loss_rate.extend([lost/100.0])
-            #tie_rate.extend([tied/100.0])            
+            number_of_episode.extend([i_episode])
+            average_return.extend([running_reward/log_interval])
+            win, lose, tie, invalid_move = games_play_against_random(policy, env)
+            win_rate.append(win/100.0)
+            lose_rate.append(lose/100.0)
+            tie_rate.append(tie/100.0)            
             print('Episode {}\tAverage return: {:.2f}'.format(
                 i_episode,
                 running_reward / log_interval))
@@ -238,24 +239,24 @@ def train(policy, env, gamma=1.0, log_interval=1000):
         
         
         if i_episode == 50000:
-            ##plot return
-            #plt.figure()
-            #plt.plot(number_of_episode, average_return)
-            #plt.xlabel("episode #")
-            #plt.ylabel("average return")
-            #plt.title("Training curve of Tic-Tac-Toe model")
-            #plt.savefig("part5b.png")
+            #plot return
+            plt.figure()
+            plt.plot(number_of_episode, average_return)
+            plt.xlabel("number of episode")
+            plt.ylabel("average return")
+            plt.title("Learning curve of Tic-Tac-Toe model")
+            plt.savefig("part5.png")
 
-            ##plot win/loss rates
-            #plt.figure()
-            #plt.plot(number_of_episode, win_rate , label = "win rate")
-            #plt.plot(number_of_episode, loss_rate, label = "loss rate")
-            #plt.plot(number_of_episode, tie_rate, label = "tie rate")
-            #plt.xlabel("episode #")
-            #plt.ylabel("win/loss/tie rates")
-            #plt.title("Evolution of Win/Loss/Tie rates with training")
-            #plt.legend()
-            #plt.savefig("part6.png")
+            #plot win/loss rates
+            plt.figure()
+            plt.plot(number_of_episode, win_rate , label = "win rate")
+            plt.plot(number_of_episode, lose_rate, label = "loss rate")
+            plt.plot(number_of_episode, tie_rate, label = "tie rate")
+            plt.xlabel("number of episode")
+            plt.ylabel("win/loss/tie rates")
+            plt.title("win/loss/tie rates over episode")
+            plt.legend()
+            plt.savefig("part6.png")
             
             return
         
@@ -274,6 +275,52 @@ def load_weights(policy, episode):
     """Load saved weights"""
     weights = torch.load("ttt/policy-%d.pkl" % episode)
     policy.load_state_dict(weights)
+
+
+def games_play_against_random(policy, env):
+    """
+    Use learned policy to play 100 games against random. count the number of times that 
+    the agent win/lose/tie. 
+    """
+    win = 0
+    lose = 0
+    tie = 0
+    invalid_move = 0
+    
+    for i in range(100):
+        state = env.reset()
+        done = False
+        while not done:
+            action, logprob = select_action(policy, state)
+            state, status, done = env.play_against_random(action)
+            invalid_move += (1 if status == 'inv' else 0)
+            
+        if status == 'win':
+            win += 1
+        elif status == 'lose':
+            lose += 1
+        else:
+            tie += 1
+            
+    return win, lose, tie, invalid_move
+
+def display_games(policy, env):
+    """
+    Display five games that the trained agent plays against the random policy.
+    """
+    for i in range(5):
+        print("Game" + str(i + 1) + ":")
+        state = env.reset()
+        done = False
+        while not done:
+            action, logprob = select_action(policy, state)
+            state, status, done = env.play_against_random(action)
+            env.render()
+        print("******************")
+   
+    
+   
+    
 
 
 if __name__ == '__main__':
