@@ -89,10 +89,10 @@ class Environment(object):
         move = random.choice(pos)
         return self.step(move)
 
-    def play_against_random(self, action):
+    def play_against_random_player1(self, action):
         """Play a move, and then have a random agent play the next move."""
         state, status, done = self.step(action)
-        if not done and self.turn == 1:
+        if not done and self.turn == 2:
             state, s2, done = self.random_step()
             if done:
                 if s2 == self.STATUS_WIN:
@@ -102,6 +102,25 @@ class Environment(object):
                 else:
                     raise ValueError("???")
         return state, status, done
+    
+
+    def play_against_random_player2(self, action):
+        """Play a move, and then have a random agent play the next move."""
+        state, status, done = self.random_step()
+        if done:
+            if status == self.STATUS_WIN:
+                status = self.STATUS_LOSE
+            elif status == self.STATUS_TIE:
+                status = self.STATUS_TIE
+            else:
+                raise ValueError("???")  
+            
+        if not done and self.turn == 2:
+            state, s2, done = self.step(action)
+            status = s2          
+
+        return state, status, done
+    
 
 
 class Policy(nn.Module):
@@ -180,7 +199,7 @@ def get_reward(status):
             Environment.STATUS_VALID_MOVE  : 10, 
             Environment.STATUS_INVALID_MOVE: -10,
             Environment.STATUS_WIN         : 50,
-            Environment.STATUS_TIE         : 0,
+            Environment.STATUS_TIE         : -5,
             Environment.STATUS_LOSE        : -50
     }[status]
 
@@ -192,27 +211,17 @@ def train(policy, env, gamma=0.85, log_interval=1000):
     running_reward = 0
     
     number_of_episode = []
-    #for part 5  
     average_return = []
-    num_invalid_move = []
     
-    #for part 6
     win_rate = []
     lose_rate = []
     tie_rate = []
-    
-    #for part 7
-    first_move0 = []
-    first_move1 = []
-    first_move2 = []
-    first_move3 = []
-    first_move4 = []
-    first_move5 = []
-    first_move6 = []
-    first_move7 = []
-    first_move8 = []
-    
 
+    win_rate2 = []
+    lose_rate2 = []
+    tie_rate2 = []    
+    
+    total_iteration = 50000
 
     for i_episode in count(1):
         
@@ -222,7 +231,12 @@ def train(policy, env, gamma=0.85, log_interval=1000):
         done = False
         while not done:
             action, logprob = select_action(policy, state)
-            state, status, done = env.play_against_random(action)
+            
+            if i_episode%2 == 1: #train first half of the iteration as player 1
+                state, status, done = env.play_against_random_player1(action)
+            else: #second half of the iteration as player 2
+                state, status, done = env.play_against_random_player2(action)
+                
             reward = get_reward(status)
             saved_logprobs.append(logprob)
             saved_rewards.append(reward)
@@ -234,32 +248,26 @@ def train(policy, env, gamma=0.85, log_interval=1000):
 
         if i_episode % log_interval == 0:
             number_of_episode.append(i_episode)
-            #for part 5
+
             average_return.append(running_reward/log_interval)
-            win, lose, tie, invalid_move = games_play_against_random(policy, env)
-            # for part 6
+            win, lose, tie, invalid_move = games_play_against_random_player1(policy, env)
+            win2, lose2, tie2, invalid_move2 = games_play_against_random_player2(policy, env)
+            # for player 1
             win_rate.append(win/100.0)
             lose_rate.append(lose/100.0)
             tie_rate.append(tie/100.0)
-            #part 5c
-            num_invalid_move.append(invalid_move)
-            #for part 7
-            distribution = first_move_distr(policy, env)
-            first_move0.append(distribution[0][0])
-            first_move1.append(distribution[0][1])
-            first_move2.append(distribution[0][2])
-            first_move3.append(distribution[0][3])
-            first_move4.append(distribution[0][4])
-            first_move5.append(distribution[0][5])
-            first_move6.append(distribution[0][6])
-            first_move7.append(distribution[0][7])
-            first_move8.append(distribution[0][8])
+            
+            # for player 2
+            win_rate2.append(win2/100.0)
+            lose_rate2.append(lose2/100.0)
+            tie_rate2.append(tie2/100.0)        
+            
             
             print('Episode {}\tAverage return: {:.2f}'.format(
                 i_episode,
                 running_reward / log_interval))
             running_reward = 0
-
+        
         if i_episode % (log_interval) == 0:
             torch.save(policy.state_dict(),
                        "ttt/policy-%d.pkl" % i_episode)
@@ -279,89 +287,28 @@ def train(policy, env, gamma=0.85, log_interval=1000):
             plt.title("Learning curve of Tic-Tac-Toe model")
             plt.savefig("part5.png")
             
-            #part 5c: plot number of invalid moves
-            plt.figure()
-            plt.plot(number_of_episode, num_invalid_move)
-            plt.xlabel("number of episode")
-            plt.ylabel("number of invalid moves")
-            plt.title("Number of invalid moves over episode")
-            plt.savefig("part5c1.png")            
-            
-
-            #part 6: plot win/loss rates
+            # for player 1
             plt.figure()
             plt.plot(number_of_episode, win_rate , label = "win rate")
             plt.plot(number_of_episode, lose_rate, label = "loss rate")
             plt.plot(number_of_episode, tie_rate, label = "tie rate")
             plt.xlabel("number of episode")
             plt.ylabel("win/loss/tie rates")
-            plt.title("win/loss/tie rates over episode")
+            plt.title("win/loss/tie rates over episode for player1")
             plt.legend()
-            plt.savefig("part6.png")
+            plt.savefig("player1.png")
             
-            #part 7: plot distribution of first move
-            plt.figure()
-            plt.plot(number_of_episode, first_move0)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[0]")
-            plt.title("distribution of first move[0] over episode")
-            plt.savefig("p7m0.png")
             
+            # for player 2
             plt.figure()
-            plt.plot(number_of_episode, first_move1)
+            plt.plot(number_of_episode, win_rate , label = "win rate")
+            plt.plot(number_of_episode, lose_rate, label = "loss rate")
+            plt.plot(number_of_episode, tie_rate, label = "tie rate")
             plt.xlabel("number of episode")
-            plt.ylabel("first move[1]")
-            plt.title("distribution of first move[1] over episode")
-            plt.savefig("p7m1.png")
-            
-            plt.figure()
-            plt.plot(number_of_episode, first_move2)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[2]")
-            plt.title("distribution of first move[2] over episode")
-            plt.savefig("p7m2.png")
-            
-            plt.figure()
-            plt.plot(number_of_episode, first_move3)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[3]")
-            plt.title("distribution of first move[3] over episode")
-            plt.savefig("p7m3.png")
-            
-            plt.figure()
-            plt.plot(number_of_episode, first_move4)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[4]")
-            plt.title("distribution of first move[4] over episode")
-            plt.savefig("p7m4.png")
-            
-            plt.figure()
-            plt.plot(number_of_episode, first_move5)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[5]")
-            plt.title("distribution of first move[5] over episode")
-            plt.savefig("p7m5.png")
-            
-            plt.figure()
-            plt.plot(number_of_episode, first_move6)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[6]")
-            plt.title("distribution of first move[6] over episode")
-            plt.savefig("p7m6.png")
-            
-            plt.figure()
-            plt.plot(number_of_episode, first_move7)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[7]")
-            plt.title("distribution of first move[7] over episode")
-            plt.savefig("p7m7.png")
-            
-            plt.figure()
-            plt.plot(number_of_episode, first_move8)
-            plt.xlabel("number of episode")
-            plt.ylabel("first move[8]")
-            plt.title("distribution of first move[8] over episode")
-            plt.savefig("p7m8.png")            
+            plt.ylabel("win/loss/tie rates")
+            plt.title("win/loss/tie rates over episode for player2")
+            plt.legend()
+            plt.savefig("player2.png")            
             
             return
         
@@ -382,7 +329,7 @@ def load_weights(policy, episode):
     policy.load_state_dict(weights)
 
 
-def games_play_against_random(policy, env):
+def games_play_against_random_player2(policy, env):
     """
     Use learned policy to play 100 games against random. count the number of times that 
     the agent win/lose/tie. 
@@ -397,7 +344,35 @@ def games_play_against_random(policy, env):
         done = False
         while not done:
             action, logprob = select_action(policy, state)
-            state, status, done = env.play_against_random(action)
+            state, status, done = env.play_against_random_player2(action)
+            if status == 'inv':
+                invalid_move += 1
+            
+        if status == 'win':
+            win += 1
+        elif status == 'lose':
+            lose += 1
+        else:
+            tie += 1
+            
+    return win, lose, tie, invalid_move
+
+def games_play_against_random_player1(policy, env):
+    """
+    Use learned policy to play 100 games against random. count the number of times that 
+    the agent win/lose/tie. 
+    """
+    win = 0
+    lose = 0
+    tie = 0
+    invalid_move = 0
+    
+    for i in range(100):
+        state = env.reset()
+        done = False
+        while not done:
+            action, logprob = select_action(policy, state)
+            state, status, done = env.play_against_random_player1(action)
             if status == 'inv':
                 invalid_move += 1
             
@@ -430,12 +405,12 @@ if __name__ == '__main__':
     policy = Policy()
     env = Environment()
 
-    # if len(sys.argv) == 1:
-    #     # `python tictactoe.py` to train the agent
-    #     train(policy, env)
-    # else:
-    #     # `python tictactoe.py <ep>` to print the first move distribution
-    #     # using weightt checkpoint at episode int(<ep>)
-    #     ep = int(sys.argv[1])
-    #     load_weights(policy, ep)
-    #     print(first_move_distr(policy, env))
+    if len(sys.argv) == 1:
+        # `python tictactoe.py` to train the agent
+        train(policy, env)
+    else:
+        # `python tictactoe.py <ep>` to print the first move distribution
+        # using weightt checkpoint at episode int(<ep>)
+        ep = int(sys.argv[1])
+        load_weights(policy, ep)
+        print(first_move_distr(policy, env))
