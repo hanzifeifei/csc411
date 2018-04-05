@@ -196,11 +196,11 @@ def finish_episode(saved_rewards, saved_logprobs, gamma=1.0):
 def get_reward(status):
     """Returns a numeric given an environment status."""
     return {
-            Environment.STATUS_VALID_MOVE  : 10, 
-            Environment.STATUS_INVALID_MOVE: -10,
+            Environment.STATUS_VALID_MOVE  : 1, 
+            Environment.STATUS_INVALID_MOVE: -50,
             Environment.STATUS_WIN         : 50,
             Environment.STATUS_TIE         : -5,
-            Environment.STATUS_LOSE        : -50
+            Environment.STATUS_LOSE        : -10
     }[status]
 
 def train(policy, env, gamma=0.85, log_interval=1000):
@@ -232,7 +232,7 @@ def train(policy, env, gamma=0.85, log_interval=1000):
         while not done:
             action, logprob = select_action(policy, state)
             
-            if i_episode%2 == 1: #train first half of the iteration as player 1
+            if i_episode % 2 == 1: #train first half of the iteration as player 1
                 state, status, done = env.play_against_random_player1(action)
             else: #second half of the iteration as player 2
                 state, status, done = env.play_against_random_player2(action)
@@ -285,7 +285,7 @@ def train(policy, env, gamma=0.85, log_interval=1000):
             plt.xlabel("number of episode")
             plt.ylabel("average return")
             plt.title("Learning curve of Tic-Tac-Toe model")
-            plt.savefig("part5.png")
+            plt.savefig("training_curve.png")
             
             # for player 1
             plt.figure()
@@ -301,9 +301,9 @@ def train(policy, env, gamma=0.85, log_interval=1000):
             
             # for player 2
             plt.figure()
-            plt.plot(number_of_episode, win_rate , label = "win rate")
-            plt.plot(number_of_episode, lose_rate, label = "loss rate")
-            plt.plot(number_of_episode, tie_rate, label = "tie rate")
+            plt.plot(number_of_episode, win_rate2 , label = "win rate")
+            plt.plot(number_of_episode, lose_rate2, label = "loss rate")
+            plt.plot(number_of_episode, tie_rate2, label = "tie rate")
             plt.xlabel("number of episode")
             plt.ylabel("win/loss/tie rates")
             plt.title("win/loss/tie rates over episode for player2")
@@ -385,9 +385,11 @@ def games_play_against_random_player1(policy, env):
             
     return win, lose, tie, invalid_move
 
-def display_games(policy, env):
+def display_games(policy, env, player):
     """
     Display five games that the trained agent plays against the random policy.
+    player = 1 if it's player1
+    player = 2 if it's player2
     """
     for i in range(5):
         print("Game" + str(i + 1) + ":")
@@ -395,7 +397,10 @@ def display_games(policy, env):
         done = False
         while not done:
             action, logprob = select_action(policy, state)
-            state, status, done = env.play_against_random(action)
+            if player == 1:
+                state, status, done = env.play_against_random_player1(action)
+            if player == 2:
+                state, status, done = env.play_against_random_player2(action)                
             env.render()
         print("******************") 
 
