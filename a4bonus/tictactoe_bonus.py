@@ -121,6 +121,41 @@ class Environment(object):
 
         return state, status, done
     
+    #==================Part 2 Play================================#
+    
+    def play_against_train_player1(self, action):
+        """Play a move, and then have a random agent play the next move."""
+        state, status, done = self.step(action)
+        if not done and self.turn == 2:
+            actionOther, logprob = select_action(policy_trained, state)
+            state, s2, done = self.step(actionOther)
+            if done:
+                if s2 == self.STATUS_WIN:
+                    status = self.STATUS_LOSE
+                elif s2 == self.STATUS_TIE:
+                    status = self.STATUS_TIE
+                else:
+                    raise ValueError("???")
+        return state, status, done
+    
+
+    def play_against_train_player2(self, action):
+        """Play a move, and then have a random agent play the next move."""
+        actionOther, logprob = select_action(policy_trained, state)
+        state, status, done = self.step(actionOther)   
+        if done:
+            if status == self.STATUS_WIN:
+                status = self.STATUS_LOSE
+            elif status == self.STATUS_TIE:
+                status = self.STATUS_TIE
+            else:
+                raise ValueError("???")  
+            
+        if not done and self.turn == 2:
+            state, s2, done = self.step(action)
+            status = s2          
+
+        return state, status, done
 
 
 class Policy(nn.Module):
@@ -220,8 +255,6 @@ def train(policy, env, gamma=0.85, log_interval=1000):
     win_rate2 = []
     lose_rate2 = []
     tie_rate2 = []    
-    
-    total_iteration = 50000
 
     for i_episode in count(1):
         
@@ -270,7 +303,7 @@ def train(policy, env, gamma=0.85, log_interval=1000):
         
         if i_episode % (log_interval) == 0:
             torch.save(policy.state_dict(),
-                       "ttt/policy-%d.pkl" % i_episode)
+                       "ttt_part2/policy-%d.pkl" % i_episode)
 
         if i_episode % 1 == 0: # batch_size
             optimizer.step()
@@ -311,8 +344,7 @@ def train(policy, env, gamma=0.85, log_interval=1000):
             plt.savefig("player2.png")            
             
             return
-        
-
+    
 
 def first_move_distr(policy, env):
     """Display the distribution of first moves."""
@@ -404,18 +436,130 @@ def display_games(policy, env, player):
             env.render()
         print("******************") 
 
+#==============================================================================#
+#                      Part 2 Play Self                                        #
+#==============================================================================#
 
+def train_selfPlay(policy, env, gamma=0.75, log_interval=1000):
+    """Train policy gradient."""
+    optimizer = optim.Adam(policy.parameters(), lr=0.001)
+    scheduler = torch.optim.lr_scheduler.StepLR(
+            optimizer, step_size=10000, gamma=0.9)
+    running_reward = 0
+    
+    number_of_episode = []
+    average_return = []
+    
+    win_rate = []
+    lose_rate = []
+    tie_rate = []
+
+    win_rate2 = []
+    lose_rate2 = []
+    tie_rate2 = []    
+
+    for i_episode in count(1):
+        
+        saved_rewards = []
+        saved_logprobs = []
+        state = env.reset()
+        done = False
+        while not done:
+            action, logprob = select_action(policy, state)
+            
+            state, status, done = env.play_against_train_player1(action)
+                
+            reward = get_reward(status)
+            saved_logprobs.append(logprob)
+            saved_rewards.append(reward)
+         
+        R = compute_returns(saved_rewards)[0]
+        running_reward += R
+
+        finish_episode(saved_rewards, saved_logprobs, gamma)
+
+        if i_episode % log_interval == 0:
+            number_of_episode.append(i_episode)
+
+            average_return.append(running_reward/log_interval)
+            win, lose, tie, invalid_move = games_play_against_random_player1(policy, env)
+            win2, lose2, tie2, invalid_move2 = games_play_against_random_player2(policy, env)
+            # for player 1
+            win_rate.append(win/100.0)
+            lose_rate.append(lose/100.0)
+            tie_rate.append(tie/100.0)
+            
+            # for player 2
+            win_rate2.append(win2/100.0)
+            lose_rate2.append(lose2/100.0)
+            tie_rate2.append(tie2/100.0)        
+            
+            
+            print('Episode {}\tAverage return: {:.2f}'.format(
+                i_episode,
+                running_reward / log_interval))
+            running_reward = 0
+        
+        if i_episode % (log_interval) == 0:
+            torch.save(policy.state_dict(),
+                       "ttt_part2/policy-%d.pkl" % i_episode)
+
+        if i_episode % 1 == 0: # batch_size
+            optimizer.step()
+            scheduler.step()
+            optimizer.zero_grad()
+        
+        
+        if i_episode == 50000:
+            #part 5: plot average return
+            plt.figure()
+            plt.plot(number_of_episode, average_return)
+            plt.xlabel("number of episode")
+            plt.ylabel("average return")
+            plt.title("Learning curve of Tic-Tac-Toe model")
+            plt.savefig("p2_training_curve.png")
+            
+            # for player 1
+            plt.figure()
+            plt.plot(number_of_episode, win_rate , label = "win rate")
+            plt.plot(number_of_episode, lose_rate, label = "loss rate")
+            plt.plot(number_of_episode, tie_rate, label = "tie rate")
+            plt.xlabel("number of episode")
+            plt.ylabel("win/loss/tie rates")
+            plt.title("win/loss/tie rates over episode for player1")
+            plt.legend()
+            plt.savefig("p2_player1.png")
+            
+            
+            # for player 2
+            plt.figure()
+            plt.plot(number_of_episode, win_rate2 , label = "win rate")
+            plt.plot(number_of_episode, lose_rate2, label = "loss rate")
+            plt.plot(number_of_episode, tie_rate2, label = "tie rate")
+            plt.xlabel("number of episode")
+            plt.ylabel("win/loss/tie rates")
+            plt.title("win/loss/tie rates over episode for player2")
+            plt.legend()
+            plt.savefig("p2_player2.png")            
+            
+            return
+    
 if __name__ == '__main__':
     import sys
     policy = Policy()
     env = Environment()
 
     if len(sys.argv) == 1:
-        # `python tictactoe.py` to train the agent
-        train(policy, env)
+        #train with self-play
+        policy_trained = Policy()
+        weights = torch.load("ttt/policy-%d.pkl" % 50000)
+        policy_trained.load_state_dict(weights)        
+        train_selfPlay(policy, env)
+        ## `python tictactoe.py` to train the agent
+        #train(policy, env)
     else:
-        # `python tictactoe.py <ep>` to print the first move distribution
-        # using weightt checkpoint at episode int(<ep>)
+        ## `python tictactoe.py <ep>` to print the first move distribution
+        ## using weightt checkpoint at episode int(<ep>)
         ep = int(sys.argv[1])
         load_weights(policy, ep)
         print(first_move_distr(policy, env))
